@@ -1,13 +1,19 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { sanitizeNextPath } from "@/lib/auth";
-import { missingEnv } from "@/lib/env";
+import { isAuthEnabled, missingEnv } from "@/lib/env";
 import { APP_NAME, APP_TAGLINE, labels } from "@/lib/labels";
 import { LoginForm } from "./login-form";
 
 export const metadata: Metadata = { title: labels.login.title };
 
+// تعتمد الصفحة على متغيرات البيئة وقت التشغيل (هل الحماية مفعّلة؟)،
+// فلا يجوز بناؤها بشكل ثابت وقت البناء.
+export const dynamic = "force-dynamic";
+
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string | string[] }> }) {
+  if (!isAuthEnabled()) redirect("/");
   const params = await searchParams;
   const next = sanitizeNextPath(Array.isArray(params.next) ? params.next[0] : params.next);
   const missing = missingEnv();

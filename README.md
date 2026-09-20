@@ -8,7 +8,7 @@
 - **الرئيسية**: ملخص، التواريخ القادمة مرتبة بالأقرب، والشرائح التي لم تُدفع فواتيرها للفترة الحالية.
 - **نسخة احتياطية** بصيغة JSON من `/api/export`.
 
-الواجهة عربية بالكامل (RTL)، والوصول محمي بكلمة مرور واحدة.
+الواجهة عربية بالكامل (RTL). حماية الوصول بكلمة مرور واحدة **اختيارية**: تُفعَّل بمجرد ضبط المتغير `APP_PASSWORD`، وبدونه يكون التطبيق مفتوحاً لكل من يعرف الرابط.
 
 ## التقنيات
 
@@ -18,12 +18,12 @@ Next.js 16 (App Router) · React 19 · Tailwind CSS 4 · Drizzle ORM · Turso (l
 
 ```bash
 npm install
-cp .env.example .env.local      # ثم عدّل APP_PASSWORD و AUTH_SECRET
+cp .env.example .env.local      # اختياري: اضبط APP_PASSWORD و AUTH_SECRET لتفعيل صفحة الدخول
 npm run db:migrate              # ينشئ قاعدة SQLite محلية في data/local.db
 npm run dev                     # http://localhost:3000
 ```
 
-لتوليد `AUTH_SECRET` عشوائي:
+لتوليد `AUTH_SECRET` عشوائي (مطلوب فقط مع `APP_PASSWORD`):
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
@@ -44,14 +44,15 @@ npm run test:e2e    # بناء إنتاجي + اختبارات المتصفح ع
 
 1. **استيراد المستودع**: من [vercel.com](https://vercel.com) → **Add New → Project** → اختر `HadiTAG7/Raqi`. سيُكتشف Next.js تلقائياً.
    - إن كان الكود على فرع غير `main`، اضبط **Settings → Git → Production Branch** على اسم الفرع، أو ادمجه في `main`.
-2. **متغيرات البيئة**: في خطوة الاستيراد (أو لاحقاً من **Settings → Environment Variables**) أضف:
+2. **متغيرات البيئة** (اختياري، لتفعيل صفحة الدخول): في خطوة الاستيراد أو لاحقاً من **Settings → Environment Variables** أضف:
    - `APP_PASSWORD`: كلمة المرور التي ستدخل بها.
    - `AUTH_SECRET`: نص عشوائي طوله 32 حرفاً أو أكثر.
+   بدونهما يعمل التطبيق مفتوحاً بدون تسجيل دخول.
 3. اضغط **Deploy**. النشر الأول سينجح ويعرض رسالة "قاعدة البيانات غير مهيأة" لأن Turso لم يُربط بعد.
 4. **قاعدة البيانات**: من صفحة المشروع → **Storage → Create Database → Turso Cloud** → الخطة **Free** → المنطقة الأقرب (مثل Frankfurt) → **Create** → **Connect Project** → اترك حقل Custom Prefix فارغاً → فعّل Production (و Preview إن شئت) → **Connect**.
    سيضيف التكامل المتغيرين `TURSO_DATABASE_URL` و`TURSO_AUTH_TOKEN` تلقائياً.
 5. **إعادة النشر (مهم)**: المتغيرات الجديدة لا تصل إلى النشر القائم. من **Deployments** → آخر نشر → قائمة **⋯** → **Redeploy**. أثناء البناء يشغّل التطبيق الهجرات وينشئ الجداول.
-6. افتح رابط المشروع وسجّل الدخول بـ `APP_PASSWORD`.
+6. افتح رابط المشروع (وسجّل الدخول بـ `APP_PASSWORD` إن كنت فعّلته).
 
 (اختياري) لتقليل زمن الاستجابة اضبط **Settings → Functions → Region** على نفس منطقة قاعدة Turso.
 
@@ -59,8 +60,8 @@ npm run test:e2e    # بناء إنتاجي + اختبارات المتصفح ع
 
 | المتغير | مطلوب | الوصف |
 |---|---|---|
-| `APP_PASSWORD` | نعم | كلمة المرور الوحيدة للدخول |
-| `AUTH_SECRET` | نعم | سر توقيع كوكي الجلسة (32+ حرفاً). تغييره يُسجّل الخروج من كل الأجهزة |
+| `APP_PASSWORD` | لا | كلمة مرور الدخول. ضبطها يفعّل صفحة الدخول؛ تركها فارغة يترك التطبيق مفتوحاً |
+| `AUTH_SECRET` | مع `APP_PASSWORD` | سر توقيع كوكي الجلسة (32+ حرفاً). تغييره يُسجّل الخروج من كل الأجهزة |
 | `TURSO_DATABASE_URL` | في الإنتاج | يضيفه تكامل Turso. محلياً يمكن تركه فارغاً فيُستخدم `file:./data/local.db` |
 | `TURSO_AUTH_TOKEN` | في الإنتاج | يضيفه تكامل Turso |
 

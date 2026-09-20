@@ -9,7 +9,7 @@ import {
   sanitizeNextPath,
   sessionCookieOptions,
 } from "@/lib/auth";
-import { EnvNotConfiguredError, getEnv } from "@/lib/env";
+import { EnvNotConfiguredError, getEnv, isAuthEnabled } from "@/lib/env";
 import { labels } from "@/lib/labels";
 
 export interface LoginState {
@@ -17,6 +17,7 @@ export interface LoginState {
 }
 
 export async function loginAction(_prev: LoginState, formData: FormData): Promise<LoginState> {
+  if (!isAuthEnabled()) redirect("/");
   const password = String(formData.get("password") ?? "");
   const next = sanitizeNextPath(formData.get("next"));
 

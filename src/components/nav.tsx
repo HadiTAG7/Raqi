@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Download, Home, LogOut, PlusCircle } from "lucide-react";
 import { logoutAction } from "@/actions/auth";
 import { buttonClasses } from "@/components/ui/button";
+import { isAuthEnabled } from "@/lib/env";
 import { APP_NAME, labels } from "@/lib/labels";
 
 export function Nav() {
@@ -25,12 +26,14 @@ export function Nav() {
             <Download className="size-4" aria-hidden />
             {labels.nav.export}
           </a>
-          <form action={logoutAction}>
-            <button type="submit" className={buttonClasses("ghost", "sm")}>
-              <LogOut className="size-4" aria-hidden />
-              {labels.nav.logout}
-            </button>
-          </form>
+          {isAuthEnabled() ? (
+            <form action={logoutAction}>
+              <button type="submit" className={buttonClasses("ghost", "sm")}>
+                <LogOut className="size-4" aria-hidden />
+                {labels.nav.logout}
+              </button>
+            </form>
+          ) : null}
         </nav>
       </div>
     </header>
