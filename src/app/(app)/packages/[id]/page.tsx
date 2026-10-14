@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { LinkButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmButton } from "@/components/ui/confirm-button";
+import { isDbConfigured } from "@/db/client";
 import { getPackageWithLines } from "@/db/queries";
 import { lineBilling } from "@/lib/billing";
 import { dateStatus, daysBetween, formatIsoDate, todayRiyadh, type IsoDate } from "@/lib/dates";
@@ -16,6 +17,7 @@ import { parseId } from "@/lib/validation";
 type Props = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  if (!isDbConfigured()) return {};
   const id = parseId((await params).id);
   const pkg = id ? await getPackageWithLines(id) : null;
   return { title: pkg?.name ?? labels.package.notFound };
@@ -39,6 +41,7 @@ function DateBlock({ label, date, today }: { label: string; date: IsoDate | null
 }
 
 export default async function PackagePage({ params }: Props) {
+  if (!isDbConfigured()) return null;
   const id = parseId((await params).id);
   if (!id) notFound();
   const pkg = await getPackageWithLines(id);

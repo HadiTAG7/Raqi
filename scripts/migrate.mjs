@@ -11,6 +11,15 @@ const explicit = process.env.TURSO_DATABASE_URL?.trim();
 const isHosted = Boolean(process.env.VERCEL) || process.env.NODE_ENV === "production";
 const url = explicit || (isHosted ? "" : "file:./data/local.db");
 
+// على Vercel: VERCEL_ENV = production | preview | development (متاح وقت البناء).
+// قاعدة Turso مربوطة ببيئة Production فقط؛ هذا الحاجز يمنع أي بناء معاينة
+// مربوط بالخطأ من تطبيق هجرات على قاعدة الإنتاج.
+const vercelEnv = process.env.VERCEL_ENV;
+if (explicit && vercelEnv && vercelEnv !== "production") {
+  console.warn(`[migrate] VERCEL_ENV=${vercelEnv}: تم تخطي الهجرات؛ تُطبَّق على قاعدة الإنتاج من نشر الإنتاج فقط.`);
+  process.exit(0);
+}
+
 if (!url) {
   console.warn("[migrate] TURSO_DATABASE_URL غير مضبوط؛ تم تخطي الهجرات. أضف قاعدة Turso ثم أعد النشر.");
   process.exit(0);

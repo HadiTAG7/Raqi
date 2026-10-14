@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { updatePackageAction } from "@/actions/packages";
 import { PackageForm } from "@/components/package-form";
 import { Card } from "@/components/ui/card";
+import { isDbConfigured } from "@/db/client";
 import { getPackage } from "@/db/queries";
 import { labels } from "@/lib/labels";
 import { parseId } from "@/lib/validation";
@@ -10,6 +11,7 @@ import { parseId } from "@/lib/validation";
 export const metadata: Metadata = { title: labels.package.edit };
 
 export default async function EditPackagePage({ params }: { params: Promise<{ id: string }> }) {
+  if (!isDbConfigured()) return null;
   const id = parseId((await params).id);
   if (!id) notFound();
   const pkg = await getPackage(id);

@@ -4,6 +4,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { isDbConfigured } from "@/db/client";
 import { getAllPackages } from "@/db/queries";
 import { buildDashboard, type DateKind } from "@/lib/dashboard";
 import { formatIsoDate, todayRiyadh } from "@/lib/dates";
@@ -21,6 +22,7 @@ function daysText(daysLeft: number): string {
 }
 
 export default async function DashboardPage() {
+  if (!isDbConfigured()) return null;
   const today = todayRiyadh();
   const packages = await getAllPackages();
   const data = buildDashboard(packages, today);
