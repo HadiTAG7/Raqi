@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { Nav } from "@/components/nav";
-import { Card } from "@/components/ui/card";
 import { isDbConfigured } from "@/db/client";
 import { labels } from "@/lib/labels";
 import { requireSession } from "@/lib/session";
@@ -17,10 +16,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         {isDbConfigured() ? (
           children
         ) : (
-          <Card role="alert" className="border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200">
+          <div role="alert" className="rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 p-5 text-amber-900 dark:text-amber-200 shadow-xs">
             <h1 className="mb-2 text-lg font-semibold">{labels.dbNotConfigured.title}</h1>
             <p className="text-sm">{labels.dbNotConfigured.body}</p>
-          </Card>
+          </div>
         )}
       </main>
     </div>

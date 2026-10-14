@@ -108,6 +108,7 @@ export const labels = {
     sectionTitle: "الأشخاص والشرائح",
     hint: "سجّل صاحب كل شريحة الآن أو لاحقاً من صفحة الباقة. كل الحقول اختيارية.",
     empty: "غير مسجل",
+    unnamed: "بدون اسم",
     slotLegend: (slot: number, type: string) => `الشريحة ${slot} (${type})`,
   },
   theme: {

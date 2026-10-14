@@ -31,17 +31,23 @@ function subscribe(onChange: () => void): () => void {
 
 const ICONS: Record<ThemePreference, typeof Sun> = { system: Monitor, light: Sun, dark: Moon };
 
+const noopSubscribe = () => () => {};
+
 export function ThemeToggle() {
   const preference = useSyncExternalStore(subscribe, readThemePreference, () => "system" as ThemePreference);
+  // الخادم لا يعرف التفضيل المحفوظ؛ نخفي الأيقونة والنص حتى يُعرف على الجهاز لتجنّب عرض "تلقائي" بالخطأ
+  const hydrated = useSyncExternalStore(noopSubscribe, () => true, () => false);
 
-  // عند "تلقائي": تابع تغيّر مظهر الجهاز أثناء فتح الصفحة
+  // يعيد تطبيق المظهر عند التركيب (قد يكون مظهر الجهاز تغيّر بينما لم تكن الأداة معروضة)،
+  // ويتابع تغيّر مظهر الجهاز أثناء فتح الصفحة. يقرأ التفضيل الحالي في كل مرة بدل قيمة محفوظة
+  // من وقت العرض، حتى لا يُلغي ضغطة سريعة على الزر حدثت أثناء تحميل الصفحة.
   useEffect(() => {
-    if (preference !== "system") return;
     const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = () => syncThemeClass("system");
-    media.addEventListener("change", onChange);
-    return () => media.removeEventListener("change", onChange);
-  }, [preference]);
+    const sync = () => syncThemeClass(readThemePreference());
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
 
   const Icon = ICONS[preference];
   const current = labels.theme[preference];
@@ -50,14 +56,15 @@ export function ThemeToggle() {
   return (
     <button
       type="button"
-      onClick={() => applyThemePreference(NEXT_THEME[preference])}
+      // نقرأ التفضيل المحفوظ لحظة الضغط (قد تُعاد الضغطة بعد التحميل قبل تحديث العرض)
+      onClick={() => applyThemePreference(NEXT_THEME[readThemePreference()])}
       className={buttonClasses("ghost", "sm")}
       aria-label={`${labels.theme.label}: ${current}. ${labels.theme.switchTo} ${next}`}
       title={`${labels.theme.label}: ${current}`}
       data-theme-preference={preference}
     >
-      <Icon className="size-4" aria-hidden />
-      <span>{current}</span>
+      <Icon className={hydrated ? "size-4" : "invisible size-4"} aria-hidden />
+      <span className={hydrated ? undefined : "invisible"}>{current}</span>
     </button>
   );
 }

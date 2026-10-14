@@ -113,8 +113,10 @@ test("خطأ في بيانات شخص لا يضيع باقي القيم المد
   await page.getByLabel("تفعيل الخصم").fill("2026-05-10");
   await page.getByLabel("نهاية الخصم").fill("2026-05-01");
   await page.getByTestId("person-2").getByLabel("اسم المستخدم").fill("محمد");
+  await page.getByTestId("person-2").getByLabel("دورة الفاتورة").selectOption("yearly");
   await page.getByRole("button", { name: "إنشاء الباقة" }).click();
   await expect(page.getByText("يجب أن يكون التاريخ بعد تاريخ تفعيل الخصم")).toBeVisible();
   await expect(page).toHaveURL("/packages/new");
   await expect(page.getByTestId("person-2").getByLabel("اسم المستخدم")).toHaveValue("محمد");
+  await expect(page.getByTestId("person-2").getByLabel("دورة الفاتورة")).toHaveValue("yearly");
 });

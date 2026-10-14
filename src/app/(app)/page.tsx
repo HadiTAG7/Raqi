@@ -149,10 +149,18 @@ export default async function DashboardPage() {
             </h2>
             <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-testid="package-list">
               {data.packages.map((pkg) => (
-                <li key={pkg.id}>
-                  <Link href={`/packages/${pkg.id}`} className="block h-full rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 p-4 shadow-xs transition-colors hover:border-teal-300 dark:hover:border-teal-700 hover:bg-teal-50/40 dark:hover:bg-teal-950/30">
+                <li
+                  key={pkg.id}
+                  className="relative h-full rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 p-4 shadow-xs transition-colors hover:border-teal-300 dark:hover:border-teal-700 hover:bg-teal-50/40 dark:hover:bg-teal-950/30 has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-teal-600"
+                >
+                  <div>
                     <div className="mb-3 flex items-start justify-between gap-2">
-                      <h3 className="font-semibold text-stone-900 dark:text-stone-100">{pkg.name}</h3>
+                      <h3 className="min-w-0 font-semibold text-stone-900 dark:text-stone-100">
+                        {/* رابط "ممتد": اسم الباقة هو الرابط، وطبقته تغطي البطاقة كلها لتبقى قابلة للنقر */}
+                        <Link href={`/packages/${pkg.id}`} className="after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none">
+                          {pkg.name}
+                        </Link>
+                      </h3>
                       {pkg.unpaidPeriods > 0 ? <Badge tone="warning">{labels.payments.unpaidCount(pkg.unpaidPeriods)}</Badge> : <Badge tone="success">{labels.payments.unpaidCount(0)}</Badge>}
                     </div>
                     <dl className="grid gap-1.5 text-sm">
@@ -184,8 +192,8 @@ export default async function DashboardPage() {
                           <li key={person.slot} className="flex items-center justify-between gap-2">
                             <span className="flex min-w-0 items-center gap-2">
                               <span className="w-10 shrink-0 text-xs text-stone-500 dark:text-stone-400">{LINE_TYPE_LABELS[person.type]}</span>
-                              <span className={person.holderName ? "truncate text-stone-900 dark:text-stone-100" : "text-stone-400 dark:text-stone-500"}>
-                                {person.holderName || labels.people.empty}
+                              <span className={person.holderName ? "truncate text-stone-900 dark:text-stone-100" : "text-stone-500 dark:text-stone-400"}>
+                                {person.holderName || (person.phoneNumber ? labels.people.unnamed : labels.people.empty)}
                               </span>
                             </span>
                             {person.phoneNumber ? (
@@ -195,7 +203,7 @@ export default async function DashboardPage() {
                         ))}
                       </ul>
                     </div>
-                  </Link>
+                  </div>
                 </li>
               ))}
             </ul>

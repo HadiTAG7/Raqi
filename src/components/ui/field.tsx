@@ -43,8 +43,17 @@ export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElem
   return <input className={cx(control, "h-10", className)} {...props} />;
 }
 
-export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select className={cx(control, "h-10", className)} {...props} />;
+export function Select({ className, defaultValue, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
+  // React 19 يعيد ضبط <form action> بعد كل إرسال، ولا يطبّق تغيّر defaultValue على <select> مركّب،
+  // فيرجع الحقل لقيمته الأولى (مثلاً "شهرية" بعد حفظ "سنوية"). نعيد تركيبه عند تغيّر القيمة الافتراضية.
+  return (
+    <select
+      key={defaultValue === undefined ? undefined : String(defaultValue)}
+      defaultValue={defaultValue}
+      className={cx(control, "h-10", className)}
+      {...props}
+    />
+  );
 }
 
 export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {

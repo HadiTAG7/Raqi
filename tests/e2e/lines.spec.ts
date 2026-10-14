@@ -30,6 +30,15 @@ test("تغيير الدورة إلى سنوية يعرض فترات سنوية",
   await card.getByLabel("دورة الفاتورة").selectOption("yearly");
   await card.getByRole("button", { name: "حفظ الشريحة" }).click();
   await expect(card.getByRole("status")).toHaveText("تم الحفظ");
+  // بعد الحفظ يبقى الحقل "سنوية"، وحفظ ثانٍ لتعديل آخر لا يعيدها "شهرية"
+  await expect(card.getByLabel("دورة الفاتورة")).toHaveValue("yearly");
+  await card.getByLabel("اسم المستخدم").fill("س");
+  await Promise.all([
+    page.waitForResponse((r) => r.request().method() === "POST"),
+    card.getByRole("button", { name: "حفظ الشريحة" }).click(),
+  ]);
+  await page.reload();
+  await expect(page.locator("#line-2").getByLabel("دورة الفاتورة")).toHaveValue("yearly");
 
   await expect(card.getByRole("button", { name: /^2026:/ })).toBeVisible();
   await expect(card.getByRole("button", { name: /^2025:/ })).toBeVisible();

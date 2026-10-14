@@ -82,16 +82,16 @@ export function PackageForm({
                 </legend>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <Field label={labels.line.holderName} htmlFor={id("holderName")} error={errorFor(id("holderName"))}>
-                    <Input id={id("holderName")} name={id("holderName")} defaultValue={values[id("holderName")] ?? ""} maxLength={100} />
+                    <Input id={id("holderName")} name={id("holderName")} defaultValue={values[id("holderName")] ?? ""} aria-invalid={errorFor(id("holderName")) ? true : undefined} maxLength={100} />
                   </Field>
                   <Field label={labels.line.phoneNumber} htmlFor={id("phoneNumber")} error={errorFor(id("phoneNumber"))}>
-                    <Input id={id("phoneNumber")} name={id("phoneNumber")} defaultValue={values[id("phoneNumber")] ?? ""} dir="ltr" inputMode="tel" maxLength={30} className="ltr-digits" />
+                    <Input id={id("phoneNumber")} name={id("phoneNumber")} defaultValue={values[id("phoneNumber")] ?? ""} aria-invalid={errorFor(id("phoneNumber")) ? true : undefined} dir="ltr" inputMode="tel" maxLength={30} className="ltr-digits" />
                   </Field>
                   <Field label={labels.line.simReference} htmlFor={id("simReference")} error={errorFor(id("simReference"))}>
-                    <Input id={id("simReference")} name={id("simReference")} defaultValue={values[id("simReference")] ?? ""} dir="ltr" inputMode="numeric" maxLength={60} className="ltr-digits" />
+                    <Input id={id("simReference")} name={id("simReference")} defaultValue={values[id("simReference")] ?? ""} aria-invalid={errorFor(id("simReference")) ? true : undefined} dir="ltr" inputMode="numeric" maxLength={60} className="ltr-digits" />
                   </Field>
                   <Field label={labels.line.billingCycle} htmlFor={id("billingCycle")} error={errorFor(id("billingCycle"))}>
-                    <Select id={id("billingCycle")} name={id("billingCycle")} defaultValue={values[id("billingCycle")] || "monthly"}>
+                    <Select id={id("billingCycle")} name={id("billingCycle")} defaultValue={values[id("billingCycle")] || "monthly"} aria-invalid={errorFor(id("billingCycle")) ? true : undefined}>
                       <option value="monthly">{labels.line.monthly}</option>
                       <option value="yearly">{labels.line.yearly}</option>
                     </Select>

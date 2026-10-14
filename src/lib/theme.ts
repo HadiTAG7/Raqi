@@ -8,7 +8,7 @@ export const THEME_EVENT = "raqi-theme-change";
  * سكربت صغير يعمل في <head> قبل رسم الصفحة لتجنّب وميض الوضع الفاتح.
  * يقرأ التفضيل ويضع الصنف .dark على <html>.
  */
-export const THEME_INIT_SCRIPT = `(function(){try{var p=localStorage.getItem("${THEME_STORAGE_KEY}");var d=p==="dark"||(p!=="light"&&window.matchMedia("(prefers-color-scheme: dark)").matches);var e=document.documentElement;e.classList.toggle("dark",d);e.style.colorScheme=d?"dark":"light";}catch(_){}})();`;
+export const THEME_INIT_SCRIPT = `(function(){var p=null;try{p=localStorage.getItem("${THEME_STORAGE_KEY}")}catch(_){}try{var d=p==="dark"||(p!=="light"&&window.matchMedia("(prefers-color-scheme: dark)").matches);var e=document.documentElement;e.classList.toggle("dark",d);e.style.colorScheme=d?"dark":"light";}catch(_){}})();`;
 
 export function readThemePreference(): ThemePreference {
   try {

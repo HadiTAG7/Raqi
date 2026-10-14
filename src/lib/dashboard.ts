@@ -56,7 +56,8 @@ export interface DashboardData {
 }
 
 function isFilled(line: PackageWithLines["lines"][number]): boolean {
-  return Boolean(line.holderName || line.phoneNumber || line.simReference);
+  // نفس ما تعرضه بطاقة الباقة: الشخص مسجّل إذا كان له اسم أو رقم جوال
+  return Boolean(line.holderName || line.phoneNumber);
 }
 
 export function buildDashboard(pkgs: PackageWithLines[], today: IsoDate): DashboardData {
