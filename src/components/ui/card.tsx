@@ -5,7 +5,7 @@ function cx(...parts: Array<string | false | null | undefined>): string {
 }
 
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cx("rounded-xl border border-stone-200 bg-white p-5 shadow-xs", className)} {...props} />;
+  return <div className={cx("rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 p-5 shadow-xs", className)} {...props} />;
 }
 
 export function CardHeader({ children, className }: { children: ReactNode; className?: string }) {
@@ -13,5 +13,5 @@ export function CardHeader({ children, className }: { children: ReactNode; class
 }
 
 export function CardTitle({ children, className }: { children: ReactNode; className?: string }) {
-  return <h2 className={cx("text-base font-semibold text-stone-900", className)}>{children}</h2>;
+  return <h2 className={cx("text-base font-semibold text-stone-900 dark:text-stone-100", className)}>{children}</h2>;
 }

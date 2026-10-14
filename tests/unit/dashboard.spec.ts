@@ -51,6 +51,10 @@ test("buildDashboard يحسب البطاقات ويرتّب التواريخ", (
   expect(data.unpaidGroups).toEqual([{ packageId: 1, packageName: "أ", items: data.unpaid }]);
   expect(data.unpaid[0]).toMatchObject({ packageId: 1, lineId: 2, slot: 2, type: "international", period: "2026-09" });
   expect(data.packages[0]).toMatchObject({ id: 1, filledLines: 1, unpaidPeriods: 1, discountStatus: "ending_soon", cashbackStatus: "ended" });
+  expect(data.packages[0].people).toEqual([
+    { slot: 1, type: "primary", holderName: "هادي", phoneNumber: null },
+    { slot: 2, type: "international", holderName: null, phoneNumber: null },
+  ]);
   expect(data.packages[1]).toMatchObject({ id: 2, filledLines: 1, unpaidPeriods: 0, discountStatus: "active", cashbackStatus: "unset" });
 });
 

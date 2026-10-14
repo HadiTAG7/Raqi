@@ -40,6 +40,24 @@ export const lineInputSchema = z.object({
 
 export type LineInput = z.infer<typeof lineInputSchema>;
 
+/** بيانات الشخص (صاحب الشريحة) التي تُسجَّل مع إنشاء الباقة. */
+export const personRowSchema = z.object({
+  holderName: optionalText(100),
+  phoneNumber: optionalText(30),
+  simReference: optionalText(60),
+  billingCycle: z.preprocess((v) => (v === "" || v == null ? "monthly" : v), z.enum(["monthly", "yearly"])),
+});
+
+export type PersonRow = z.infer<typeof personRowSchema> & { slot: number };
+
+export const PERSON_FIELDS = ["holderName", "phoneNumber", "simReference", "billingCycle"] as const;
+export type PersonField = (typeof PERSON_FIELDS)[number];
+
+/** اسم حقل النموذج لشخص في شريحة معيّنة، مثل holderName_1 */
+export function personFieldName(slot: number, field: PersonField): string {
+  return `${field}_${slot}`;
+}
+
 export const PACKAGE_FIELDS = ["name", "notes", "discountStart", "discountEnd", "cashbackEnd"] as const;
 export const LINE_FIELDS = ["holderName", "phoneNumber", "simReference", "billingCycle", "billingStart", "notes"] as const;
 

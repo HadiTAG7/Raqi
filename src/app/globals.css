@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* الوضع الليلي يعتمد على الصنف .dark على <html> (يضبطه سكربت الثيم قبل العرض) */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --font-sans: var(--font-plex-arabic), "Segoe UI", Tahoma, system-ui, sans-serif;
 }
@@ -8,11 +11,20 @@ html {
   color-scheme: light;
 }
 
+html.dark {
+  color-scheme: dark;
+}
+
 body {
   background-color: var(--color-stone-50);
   color: var(--color-stone-900);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+.dark body {
+  background-color: var(--color-stone-950);
+  color: var(--color-stone-100);
 }
 
 /* الأرقام والمعرفات تبقى من اليسار لليمين داخل النص العربي */

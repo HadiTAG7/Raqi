@@ -27,14 +27,14 @@ function DateBlock({ label, date, today }: { label: string; date: IsoDate | null
   const status = dateStatus(date, today);
   const days = date && status !== "unset" ? daysBetween(today, date) : null;
   return (
-    <div className="flex flex-col gap-1 rounded-lg bg-stone-50 p-3">
-      <dt className="text-xs text-stone-600">{label}</dt>
+    <div className="flex flex-col gap-1 rounded-lg bg-stone-50 dark:bg-stone-800/50 p-3">
+      <dt className="text-xs text-stone-600 dark:text-stone-400">{label}</dt>
       <dd className="flex flex-wrap items-center gap-2">
         <span className="font-medium">{formatIsoDate(date, labels.package.unsetDate)}</span>
         <StatusBadge status={status} />
       </dd>
       {days !== null ? (
-        <dd className="text-xs text-stone-600">{days < 0 ? labels.package.daysAgo(-days) : labels.package.daysLeft(days)}</dd>
+        <dd className="text-xs text-stone-600 dark:text-stone-400">{days < 0 ? labels.package.daysAgo(-days) : labels.package.daysLeft(days)}</dd>
       ) : null}
     </div>
   );
@@ -56,7 +56,7 @@ export default async function PackagePage({ params }: Props) {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold">{pkg.name}</h1>
-            {pkg.notes ? <p className="mt-1 whitespace-pre-line text-sm text-stone-600">{pkg.notes}</p> : null}
+            {pkg.notes ? <p className="mt-1 whitespace-pre-line text-sm text-stone-600 dark:text-stone-400">{pkg.notes}</p> : null}
           </div>
           <div className="flex items-center gap-2">
             <LinkButton href={`/packages/${pkg.id}/edit`} variant="secondary" size="sm">
@@ -73,8 +73,8 @@ export default async function PackagePage({ params }: Props) {
           </div>
         </div>
         <dl className="mt-5 grid gap-3 sm:grid-cols-3">
-          <div className="flex flex-col gap-1 rounded-lg bg-stone-50 p-3">
-            <dt className="text-xs text-stone-600">{labels.package.discountStart}</dt>
+          <div className="flex flex-col gap-1 rounded-lg bg-stone-50 dark:bg-stone-800/50 p-3">
+            <dt className="text-xs text-stone-600 dark:text-stone-400">{labels.package.discountStart}</dt>
             <dd className="font-medium">{formatIsoDate(pkg.discountStart)}</dd>
           </div>
           <DateBlock label={labels.package.discountEnd} date={pkg.discountEnd} today={today} />
@@ -84,7 +84,7 @@ export default async function PackagePage({ params }: Props) {
 
       <section aria-labelledby="lines-title" className="flex flex-col gap-4">
         <h2 id="lines-title" className="text-lg font-semibold">
-          {labels.package.lines}
+          {labels.people.sectionTitle}
         </h2>
         {pkg.lines.map((line) => {
           const billing = lineBilling(line, pkg, today);

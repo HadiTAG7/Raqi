@@ -2,10 +2,13 @@ import { and, eq, inArray } from "drizzle-orm";
 import { getDb } from "./client";
 import { lines, packages, payments } from "./schema";
 import { LINE_SLOTS } from "@/lib/slots";
-import type { LineInput, PackageInput } from "@/lib/validation";
+import type { LineInput, PackageInput, PersonRow } from "@/lib/validation";
 
-/** ينشئ الباقة مع شرائحها الخمس الفارغة في معاملة واحدة ويعيد معرّفها. */
-export async function createPackage(input: PackageInput): Promise<number> {
+/**
+ * ينشئ الباقة مع شرائحها الخمس في معاملة واحدة ويعيد معرّفها.
+ * `people` اختياري: بيانات صاحب كل شريحة حسب رقمها (slot).
+ */
+export async function createPackage(input: PackageInput, people: PersonRow[] = []): Promise<number> {
   const db = getDb();
   return db.transaction(async (tx) => {
     const [created] = await tx
@@ -18,8 +21,20 @@ export async function createPackage(input: PackageInput): Promise<number> {
         cashbackEnd: input.cashbackEnd,
       })
       .returning({ id: packages.id });
+    const bySlot = new Map(people.map((p) => [p.slot, p]));
     await tx.insert(lines).values(
-      LINE_SLOTS.map(({ slot, type }) => ({ packageId: created.id, slot, type })),
+      LINE_SLOTS.map(({ slot, type }) => {
+        const person = bySlot.get(slot);
+        return {
+          packageId: created.id,
+          slot,
+          type,
+          holderName: person?.holderName ?? null,
+          phoneNumber: person?.phoneNumber ?? null,
+          simReference: person?.simReference ?? null,
+          billingCycle: person?.billingCycle ?? "monthly",
+        };
+      }),
     );
     return created.id;
   });

@@ -103,6 +103,20 @@ export const labels = {
     generic: "حدث خطأ غير متوقع، حاول مرة أخرى",
     unauthorized: "غير مصرح",
   },
+  people: {
+    title: "الأشخاص",
+    sectionTitle: "الأشخاص والشرائح",
+    hint: "سجّل صاحب كل شريحة الآن أو لاحقاً من صفحة الباقة. كل الحقول اختيارية.",
+    empty: "غير مسجل",
+    slotLegend: (slot: number, type: string) => `الشريحة ${slot} (${type})`,
+  },
+  theme: {
+    label: "المظهر",
+    switchTo: "التبديل إلى",
+    system: "تلقائي",
+    light: "فاتح",
+    dark: "داكن",
+  },
   common: {
     edit: "تعديل",
     cancel: "إلغاء",

@@ -58,7 +58,7 @@ export function LineCard({
           <CardTitle>{labels.line.slot(line.slot)}</CardTitle>
           <Badge tone={line.type === "primary" ? "info" : "neutral"}>{LINE_TYPE_LABELS[line.type]}</Badge>
         </div>
-        <span className="text-sm text-stone-600">
+        <span className="text-sm text-stone-600 dark:text-stone-400">
           {line.holderName || labels.line.empty}
           {line.phoneNumber ? (
             <>
@@ -96,27 +96,27 @@ export function LineCard({
             {pending ? labels.line.saving : labels.line.save}
           </Button>
           {state.status === "success" ? (
-            <span role="status" className="text-sm text-emerald-700">
+            <span role="status" className="text-sm text-emerald-700 dark:text-emerald-400">
               {labels.line.saved}
             </span>
           ) : null}
           {state.formError ? (
-            <span role="alert" className="text-sm text-red-600">
+            <span role="alert" className="text-sm text-red-600 dark:text-red-400">
               {state.formError}
             </span>
           ) : null}
         </div>
       </form>
 
-      <section aria-label={labels.payments.title} className="border-t border-stone-200 pt-4">
-        <h3 className="mb-3 text-sm font-semibold text-stone-800">
+      <section aria-label={labels.payments.title} className="border-t border-stone-200 dark:border-stone-800 pt-4">
+        <h3 className="mb-3 text-sm font-semibold text-stone-800 dark:text-stone-200">
           {labels.payments.title}
-          <span className="ms-2 text-xs font-normal text-stone-500">
+          <span className="ms-2 text-xs font-normal text-stone-500 dark:text-stone-400">
             ({line.billingCycle === "monthly" ? labels.line.monthly : labels.line.yearly} · {labels.line.billingStart}: {formatIsoDate(effectiveStart)})
           </span>
         </h3>
         {startsInFuture ? (
-          <p className="text-sm text-stone-600">{labels.payments.startsInFuture(formatIsoDate(effectiveStart))}</p>
+          <p className="text-sm text-stone-600 dark:text-stone-400">{labels.payments.startsInFuture(formatIsoDate(effectiveStart))}</p>
         ) : (
           <PaymentGrid lineId={line.id} cycle={line.billingCycle} periods={periods} paidPeriods={paidPeriods} />
         )}

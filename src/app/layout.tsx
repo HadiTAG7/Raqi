@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { IBM_Plex_Sans_Arabic } from "next/font/google";
 import type { ReactNode } from "react";
 import { APP_NAME, APP_TAGLINE } from "@/lib/labels";
+import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
 const plexArabic = IBM_Plex_Sans_Arabic({
@@ -19,7 +20,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="ar" dir="rtl" className={`${plexArabic.variable} h-full antialiased`}>
+    // suppressHydrationWarning: سكربت الثيم يضيف الصنف .dark على <html> قبل التحميل
+    <html lang="ar" dir="rtl" className={`${plexArabic.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );

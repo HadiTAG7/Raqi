@@ -9,9 +9,9 @@ const base =
 
 const variants: Record<ButtonVariant, string> = {
   primary: "bg-teal-700 text-white hover:bg-teal-800",
-  secondary: "border border-stone-300 bg-white text-stone-800 hover:bg-stone-100",
-  danger: "border border-red-200 bg-white text-red-700 hover:bg-red-50",
-  ghost: "text-stone-700 hover:bg-stone-200/70",
+  secondary: "border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-800 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800",
+  danger: "border border-red-200 dark:border-red-900 bg-white dark:bg-stone-900 text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40",
+  ghost: "text-stone-700 dark:text-stone-300 hover:bg-stone-200/70 dark:hover:bg-stone-800",
 };
 
 const sizes: Record<ButtonSize, string> = {

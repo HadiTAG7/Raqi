@@ -48,10 +48,10 @@ export function PaymentGrid({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className={`text-sm font-medium ${unpaidCount > 0 ? "text-amber-800" : "text-emerald-800"}`}>
+        <p className={`text-sm font-medium ${unpaidCount > 0 ? "text-amber-800 dark:text-amber-300" : "text-emerald-800 dark:text-emerald-300"}`}>
           {labels.payments.unpaidCount(unpaidCount)}
         </p>
-        <p className="text-xs text-stone-500">{labels.payments.toggleHint}</p>
+        <p className="text-xs text-stone-500 dark:text-stone-400">{labels.payments.toggleHint}</p>
       </div>
 
       <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4" aria-busy={pending}>
@@ -67,15 +67,15 @@ export function PaymentGrid({
                 onClick={() => toggle(period)}
                 className={`flex h-12 w-full items-center justify-between gap-2 rounded-lg border px-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 ${
                   paid
-                    ? "border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
-                    : "border-stone-300 bg-white text-stone-700 hover:bg-stone-100"
+                    ? "border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+                    : "border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800"
                 }`}
               >
                 <span className="font-medium">{label}</span>
                 {paid ? (
-                  <Check className="size-4 shrink-0 text-emerald-700" aria-hidden />
+                  <Check className="size-4 shrink-0 text-emerald-700 dark:text-emerald-400" aria-hidden />
                 ) : (
-                  <span className="text-xs text-stone-500">{labels.payments.unpaid}</span>
+                  <span className="text-xs text-stone-500 dark:text-stone-400">{labels.payments.unpaid}</span>
                 )}
               </button>
             </li>
@@ -84,7 +84,7 @@ export function PaymentGrid({
       </ul>
 
       {error ? (
-        <p role="alert" className="text-xs text-red-600">
+        <p role="alert" className="text-xs text-red-600 dark:text-red-400">
           {error}
         </p>
       ) : null}

@@ -36,6 +36,8 @@ export interface PackageSummary {
   cashbackStatus: DateStatus;
   filledLines: number;
   unpaidPeriods: number;
+  /** الأشخاص (أصحاب الشرائح) بترتيب الشرائح */
+  people: Array<{ slot: number; type: LineType; holderName: string | null; phoneNumber: string | null }>;
 }
 
 export interface UnpaidGroup {
@@ -101,6 +103,9 @@ export function buildDashboard(pkgs: PackageWithLines[], today: IsoDate): Dashbo
       cashbackStatus: dateStatus(pkg.cashbackEnd, today),
       filledLines: pkg.lines.filter(isFilled).length,
       unpaidPeriods,
+      people: [...pkg.lines]
+        .sort((a, b) => a.slot - b.slot)
+        .map((l) => ({ slot: l.slot, type: l.type, holderName: l.holderName, phoneNumber: l.phoneNumber })),
     });
   }
 

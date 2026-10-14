@@ -6,16 +6,51 @@ import { z } from "zod";
 import { createPackage, deletePackage, updatePackage } from "@/db/mutations";
 import { labels } from "@/lib/labels";
 import { requireSession } from "@/lib/session";
-import { PACKAGE_FIELDS, packageInputSchema, parseId, pickFormFields, type FormState } from "@/lib/validation";
+import { LINE_SLOTS } from "@/lib/slots";
+import {
+  PACKAGE_FIELDS,
+  PERSON_FIELDS,
+  packageInputSchema,
+  parseId,
+  personFieldName,
+  personRowSchema,
+  pickFormFields,
+  type FieldErrors,
+  type FormState,
+  type PersonRow,
+} from "@/lib/validation";
 
 export async function createPackageAction(_prev: FormState, formData: FormData): Promise<FormState> {
   await requireSession();
-  const values = pickFormFields(formData, PACKAGE_FIELDS);
+  const values: Record<string, string> = { ...pickFormFields(formData, PACKAGE_FIELDS) };
+  const fieldErrors: FieldErrors = {};
+
   const parsed = packageInputSchema.safeParse(values);
-  if (!parsed.success) {
-    return { status: "error", fieldErrors: z.flattenError(parsed.error).fieldErrors, values };
+  if (!parsed.success) Object.assign(fieldErrors, z.flattenError(parsed.error).fieldErrors);
+
+  const people: PersonRow[] = [];
+  for (const { slot } of LINE_SLOTS) {
+    const row: Record<string, string> = {};
+    for (const field of PERSON_FIELDS) {
+      const name = personFieldName(slot, field);
+      const raw = formData.get(name);
+      row[field] = typeof raw === "string" ? raw : "";
+      values[name] = row[field];
+    }
+    const person = personRowSchema.safeParse(row);
+    if (person.success) {
+      people.push({ slot, ...person.data });
+    } else {
+      for (const [field, messages] of Object.entries(z.flattenError(person.error).fieldErrors)) {
+        fieldErrors[`${field}_${slot}`] = messages as string[];
+      }
+    }
   }
-  const id = await createPackage(parsed.data);
+
+  if (!parsed.success || Object.keys(fieldErrors).length > 0) {
+    return { status: "error", fieldErrors, values };
+  }
+  const id = await createPackage(parsed.data, people);
   revalidatePath("/", "layout");
   redirect(`/packages/${id}`);
 }
