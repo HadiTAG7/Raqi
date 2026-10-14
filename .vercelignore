@@ -1,0 +1,10 @@
+# Local-only files that must never be uploaded by `vercel deploy`
+.env*
+!.env.example
+data/*.db
+data/*.db-*
+test-results/
+playwright-report/
+tests/.auth/
+*.tsbuildinfo
+.next/
