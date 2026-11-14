@@ -1,22 +1,44 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import { DURATION_MONTHS, addMonths, formatIsoDate, isValidIsoDate } from "@/lib/dates";
 import { labels } from "@/lib/labels";
 import { LINE_SLOTS, LINE_TYPE_LABELS } from "@/lib/slots";
-import { idleFormState, personFieldName, type FormState } from "@/lib/validation";
+import { idleFormState, personFieldName, type ExistingPackageEnds, type FormState, type PackageFormValues } from "@/lib/validation";
 
-export interface PackageFormValues {
-  name: string;
-  notes: string;
-  discountStart: string;
-  discountEnd: string;
-  cashbackEnd: string;
+const emptyValues: PackageFormValues = {
+  name: "",
+  notes: "",
+  discountStart: "",
+  discountDuration: "",
+  cashbackStart: "",
+  cashbackDuration: "",
+};
+
+/** نص المعاينة تحت قائمة المدة: تاريخ النهاية المحسوب من تاريخ التفعيل + المدة. */
+function endPreview(start: string, duration: string, keepEnd: string | null | undefined): string | undefined {
+  if (duration === "") return undefined;
+  if (duration === "keep") return keepEnd ? labels.package.endsOn(formatIsoDate(keepEnd)) : undefined;
+  if (!isValidIsoDate(start)) return labels.package.endsOnNeedsStart;
+  return labels.package.endsOn(formatIsoDate(addMonths(start, Number(duration))));
 }
 
-const emptyValues: PackageFormValues = { name: "", notes: "", discountStart: "", discountEnd: "", cashbackEnd: "" };
+function DurationOptions({ keepEnd }: { keepEnd?: string | null }) {
+  return (
+    <>
+      <option value="">{labels.package.durationUnset}</option>
+      {DURATION_MONTHS.map((months) => (
+        <option key={months} value={String(months)}>
+          {labels.package.durations[months]}
+        </option>
+      ))}
+      {keepEnd ? <option value="keep">{labels.package.durationKeep(formatIsoDate(keepEnd))}</option> : null}
+    </>
+  );
+}
 
 export function PackageForm({
   action,
@@ -24,6 +46,7 @@ export function PackageForm({
   submitLabel,
   cancelHref,
   withPeople = false,
+  keepEnds,
 }: {
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
   initial?: PackageFormValues;
@@ -31,13 +54,35 @@ export function PackageForm({
   cancelHref: string;
   /** عرض حقول الأشخاص الخمسة (عند إنشاء باقة جديدة فقط) */
   withPeople?: boolean;
+  /** في التعديل: تواريخ النهاية المخزّنة للباقات القديمة التي لا تطابق مدة، لعرض خيار "الإبقاء على التاريخ الحالي" */
+  keepEnds?: ExistingPackageEnds;
 }) {
   const [state, formAction, pending] = useActionState(action, idleFormState);
   const values: Record<string, string> = { ...initial, ...(state.values ?? {}) };
   const errorFor = (field: string) => state.fieldErrors?.[field]?.[0];
 
+  // النموذج طويل (خصوصاً على الجوال): بعد إرسال فيه أخطاء ننقل التركيز لأول حقل خاطئ ليظهر مع رسالته
+  const formRef = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    if (state.status !== "error") return;
+    formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+  }, [state]);
+
+  // الحقول نفسها غير متحكَّم بها (defaultValue) كبقية النموذج؛ هذه الحالة للمعاينة الحية فقط.
+  const [dates, setDates] = useState({
+    discountStart: initial.discountStart,
+    discountDuration: initial.discountDuration,
+    cashbackStart: initial.cashbackStart,
+    cashbackDuration: initial.cashbackDuration,
+  });
+  const track = (field: keyof typeof dates) => (event: { target: { value: string } }) =>
+    setDates((current) => ({ ...current, [field]: event.target.value }));
+  // خيار الإبقاء يظهر فقط إذا كانت الباقة فُتحت بتاريخ نهاية قديم لا يطابق أي مدة
+  const keepDiscountEnd = initial.discountDuration === "keep" ? keepEnds?.discountEnd : null;
+  const keepCashbackEnd = initial.cashbackDuration === "keep" ? keepEnds?.cashbackEnd : null;
+
   return (
-    <form action={formAction} className="flex flex-col gap-5" noValidate>
+    <form ref={formRef} action={formAction} className="flex flex-col gap-5" noValidate>
       {state.formError ? (
         <p role="alert" className="rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-700 dark:text-red-400">
           {state.formError}
@@ -48,15 +93,32 @@ export function PackageForm({
         <Input id="name" name="name" defaultValue={values.name} placeholder={labels.package.namePlaceholder} maxLength={100} aria-invalid={errorFor("name") ? true : undefined} />
       </Field>
 
-      <div className="grid gap-5 sm:grid-cols-3">
+      <div className="grid gap-5 sm:grid-cols-2">
         <Field label={labels.package.discountStart} htmlFor="discountStart" error={errorFor("discountStart")}>
-          <Input id="discountStart" name="discountStart" type="date" defaultValue={values.discountStart} dir="ltr" aria-invalid={errorFor("discountStart") ? true : undefined} />
+          <Input id="discountStart" name="discountStart" type="date" defaultValue={values.discountStart} onChange={track("discountStart")} dir="ltr" aria-invalid={errorFor("discountStart") ? true : undefined} />
         </Field>
-        <Field label={labels.package.discountEnd} htmlFor="discountEnd" error={errorFor("discountEnd")}>
-          <Input id="discountEnd" name="discountEnd" type="date" defaultValue={values.discountEnd} dir="ltr" aria-invalid={errorFor("discountEnd") ? true : undefined} />
+        <Field
+          label={labels.package.discountDuration}
+          htmlFor="discountDuration"
+          error={errorFor("discountDuration")}
+          hint={endPreview(dates.discountStart, dates.discountDuration, keepDiscountEnd)}
+        >
+          <Select id="discountDuration" name="discountDuration" defaultValue={values.discountDuration} onChange={track("discountDuration")} aria-invalid={errorFor("discountDuration") ? true : undefined}>
+            <DurationOptions keepEnd={keepDiscountEnd} />
+          </Select>
         </Field>
-        <Field label={labels.package.cashbackEnd} htmlFor="cashbackEnd" error={errorFor("cashbackEnd")}>
-          <Input id="cashbackEnd" name="cashbackEnd" type="date" defaultValue={values.cashbackEnd} dir="ltr" aria-invalid={errorFor("cashbackEnd") ? true : undefined} />
+        <Field label={labels.package.cashbackStart} htmlFor="cashbackStart" error={errorFor("cashbackStart")}>
+          <Input id="cashbackStart" name="cashbackStart" type="date" defaultValue={values.cashbackStart} onChange={track("cashbackStart")} dir="ltr" aria-invalid={errorFor("cashbackStart") ? true : undefined} />
+        </Field>
+        <Field
+          label={labels.package.cashbackDuration}
+          htmlFor="cashbackDuration"
+          error={errorFor("cashbackDuration")}
+          hint={endPreview(dates.cashbackStart, dates.cashbackDuration, keepCashbackEnd)}
+        >
+          <Select id="cashbackDuration" name="cashbackDuration" defaultValue={values.cashbackDuration} onChange={track("cashbackDuration")} aria-invalid={errorFor("cashbackDuration") ? true : undefined}>
+            <DurationOptions keepEnd={keepCashbackEnd} />
+          </Select>
         </Field>
       </div>
 

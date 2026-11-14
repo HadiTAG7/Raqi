@@ -1,14 +1,52 @@
 import { expect, test } from "@playwright/test";
+import { insertLegacyPackage } from "./db";
 import { createPackage, uniqueName } from "./helpers";
 
-test("رفض تاريخ نهاية قبل تاريخ التفعيل", async ({ page }) => {
+test("مدة كاش باك بدون تاريخ تفعيل تُرفض مع بقاء القيم", async ({ page }) => {
   await page.goto("/packages/new");
   await page.getByLabel("اسم الباقة").fill(uniqueName("باقة خاطئة"));
   await page.getByLabel("تفعيل الخصم").fill("2026-05-10");
-  await page.getByLabel("نهاية الخصم").fill("2026-05-01");
+  await page.getByLabel("مدة الخصم").selectOption("6");
+  await page.getByLabel("مدة الكاش باك").selectOption("12");
   await page.getByRole("button", { name: "إنشاء الباقة" }).click();
-  await expect(page.getByText("يجب أن يكون التاريخ بعد تاريخ تفعيل الخصم")).toBeVisible();
+  await expect(page.getByText("حدد تاريخ تفعيل الكاش باك لحساب نهايته")).toBeVisible();
   await expect(page).toHaveURL("/packages/new");
+  // التركيز ينتقل لأول حقل خاطئ فيظهر على الشاشة حتى في النموذج الطويل
+  await expect(page.getByLabel("تفعيل الكاش باك")).toBeFocused();
+  await expect(page.getByLabel("تفعيل الكاش باك")).toBeInViewport();
+  await expect(page.getByLabel("تفعيل الخصم")).toHaveValue("2026-05-10");
+  await expect(page.getByLabel("مدة الخصم")).toHaveValue("6");
+  await expect(page.getByLabel("مدة الكاش باك")).toHaveValue("12");
+  await expect(page.getByText("ينتهي في 10 نوفمبر 2026")).toBeVisible();
+
+  // بعد إدخال التاريخ تُحفظ الباقة بالنهايتين المحسوبتين
+  await page.getByLabel("تفعيل الكاش باك").fill("2026-06-01");
+  await page.getByRole("button", { name: "إنشاء الباقة" }).click();
+  await expect(page).toHaveURL(/\/packages\/\d+$/);
+  const dates = page.getByTestId("package-dates");
+  await expect(dates).toContainText("10 نوفمبر 2026");
+  await expect(dates).toContainText("1 يونيو 2027");
+});
+
+test("المعاينة الحية تحسب تاريخ النهاية من التفعيل والمدة", async ({ page }) => {
+  await page.goto("/packages/new");
+  await expect(page.getByText(/^ينتهي في/)).toHaveCount(0);
+
+  await page.getByLabel("مدة الخصم").selectOption("3");
+  await expect(page.getByText("حدد تاريخ التفعيل لحساب تاريخ النهاية")).toBeVisible();
+  // 31 يناير + 3 أشهر: أبريل 30 يوماً فقط
+  await page.getByLabel("تفعيل الخصم").fill("2026-01-31");
+  await expect(page.getByText("ينتهي في 30 أبريل 2026")).toBeVisible();
+  await page.getByLabel("مدة الخصم").selectOption("6");
+  await expect(page.getByText("ينتهي في 31 يوليو 2026")).toBeVisible();
+  await page.getByLabel("مدة الخصم").selectOption("12");
+  await expect(page.getByText("ينتهي في 31 يناير 2027")).toBeVisible();
+
+  await page.getByLabel("تفعيل الكاش باك").fill("2026-02-15");
+  await page.getByLabel("مدة الكاش باك").selectOption("6");
+  await expect(page.getByText("ينتهي في 15 أغسطس 2026")).toBeVisible();
+  await page.getByLabel("مدة الكاش باك").selectOption("");
+  await expect(page.getByText("ينتهي في 15 أغسطس 2026")).toHaveCount(0);
 });
 
 test("الاسم مطلوب", async ({ page }) => {
@@ -20,11 +58,17 @@ test("الاسم مطلوب", async ({ page }) => {
 
 test("إنشاء باقة يولّد خمس شرائح بالترتيب الصحيح", async ({ page }) => {
   const name = uniqueName("باقة العائلة");
-  await createPackage(page, { name, discountStart: "2026-01-15", discountEnd: "2027-01-14", cashbackEnd: "2026-12-31", notes: "ملاحظة تجريبية" });
+  await createPackage(page, { name, discountStart: "2026-01-15", discountMonths: 6, cashbackStart: "2026-02-01", cashbackMonths: 3, notes: "ملاحظة تجريبية" });
 
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
   await expect(page.getByText("ملاحظة تجريبية")).toBeVisible();
-  await expect(page.getByText("15 يناير 2026", { exact: true })).toBeVisible();
+  const dates = page.getByTestId("package-dates");
+  await expect(dates.getByText("15 يناير 2026", { exact: true })).toBeVisible();
+  await expect(dates.getByText("15 يوليو 2026", { exact: true })).toBeVisible();
+  await expect(dates.getByText("نهاية الخصم · 6 أشهر")).toBeVisible();
+  await expect(dates.getByText("1 فبراير 2026", { exact: true })).toBeVisible();
+  await expect(dates.getByText("1 مايو 2026", { exact: true })).toBeVisible();
+  await expect(dates.getByText("نهاية الكاش باك · 3 أشهر")).toBeVisible();
 
   const expected = ["أساسي", "دولي", "دولي", "محلي", "محلي"];
   for (let slot = 1; slot <= 5; slot++) {
@@ -41,11 +85,24 @@ test("تعديل الباقة ثم حذفها", async ({ page }) => {
   await page.getByRole("link", { name: "تعديل" }).click();
   await expect(page).toHaveURL(`/packages/${id}/edit`);
   await page.getByLabel("اسم الباقة").fill(`${name} المعدّلة`);
-  await page.getByLabel("نهاية الخصم").fill("2026-10-01");
+  await expect(page.getByLabel("مدة الخصم")).toHaveValue("");
+  await page.getByLabel("مدة الخصم").selectOption("6");
+  await expect(page.getByText("ينتهي في 1 سبتمبر 2026")).toBeVisible();
   await page.getByRole("button", { name: "حفظ" }).click();
   await expect(page).toHaveURL(`/packages/${id}`);
   await expect(page.getByRole("heading", { level: 1, name: `${name} المعدّلة` })).toBeVisible();
-  await expect(page.getByText("1 أكتوبر 2026")).toBeVisible();
+  await expect(page.getByTestId("package-dates").getByText("1 سبتمبر 2026", { exact: true })).toBeVisible();
+
+  // إعادة فتح التعديل: المدة تُستنتج من التاريخين، وتغييرها (أو تغيير التفعيل) يعيد حساب النهاية
+  await page.getByRole("link", { name: "تعديل" }).click();
+  await expect(page.getByLabel("مدة الخصم")).toHaveValue("6");
+  await expect(page.getByText("ينتهي في 1 سبتمبر 2026")).toBeVisible();
+  await page.getByLabel("تفعيل الخصم").fill("2026-03-10");
+  await page.getByLabel("مدة الخصم").selectOption("12");
+  await page.getByRole("button", { name: "حفظ" }).click();
+  await expect(page).toHaveURL(`/packages/${id}`);
+  await expect(page.getByTestId("package-dates").getByText("10 مارس 2027", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("package-dates").getByText("نهاية الخصم · سنة")).toBeVisible();
 
   await page.goto("/");
   await expect(page.getByTestId("package-list")).toContainText(`${name} المعدّلة`);
@@ -111,12 +168,50 @@ test("خطأ في بيانات شخص لا يضيع باقي القيم المد
   await page.goto("/packages/new");
   await page.getByLabel("اسم الباقة").fill(uniqueName("باقة خطأ"));
   await page.getByLabel("تفعيل الخصم").fill("2026-05-10");
-  await page.getByLabel("نهاية الخصم").fill("2026-05-01");
+  await page.getByLabel("مدة الكاش باك").selectOption("3");
   await page.getByTestId("person-2").getByLabel("اسم المستخدم").fill("محمد");
   await page.getByTestId("person-2").getByLabel("دورة الفاتورة").selectOption("yearly");
   await page.getByRole("button", { name: "إنشاء الباقة" }).click();
-  await expect(page.getByText("يجب أن يكون التاريخ بعد تاريخ تفعيل الخصم")).toBeVisible();
+  await expect(page.getByText("حدد تاريخ تفعيل الكاش باك لحساب نهايته")).toBeVisible();
   await expect(page).toHaveURL("/packages/new");
   await expect(page.getByTestId("person-2").getByLabel("اسم المستخدم")).toHaveValue("محمد");
   await expect(page.getByTestId("person-2").getByLabel("دورة الفاتورة")).toHaveValue("yearly");
+});
+
+test("باقة قديمة بتاريخ نهاية يدوي: الإبقاء عليه ثم استبداله بمدة", async ({ page }) => {
+  const name = uniqueName("باقة قديمة");
+  const id = await insertLegacyPackage({ name, discountStart: "2026-01-10", discountEnd: "2026-09-25", cashbackEnd: "2026-12-31" });
+
+  await page.goto(`/packages/${id}`);
+  const dates = page.getByTestId("package-dates");
+  await expect(dates.getByText("25 سبتمبر 2026", { exact: true })).toBeVisible();
+  await expect(dates.getByText("31 ديسمبر 2026", { exact: true })).toBeVisible();
+
+  await page.getByRole("link", { name: "تعديل" }).click();
+  const discount = page.getByLabel("مدة الخصم");
+  const cashback = page.getByLabel("مدة الكاش باك");
+  await expect(discount).toHaveValue("keep");
+  await expect(discount.locator("option[value=keep]")).toHaveText("الإبقاء على التاريخ الحالي (25 سبتمبر 2026)");
+  await expect(cashback).toHaveValue("keep");
+  await expect(page.getByText("ينتهي في 25 سبتمبر 2026")).toBeVisible();
+
+  // حفظ تغيير الاسم فقط لا يمس التواريخ القديمة
+  await page.getByLabel("اسم الباقة").fill(`${name} ٢`);
+  await page.getByRole("button", { name: "حفظ" }).click();
+  await expect(page).toHaveURL(`/packages/${id}`);
+  await expect(dates.getByText("25 سبتمبر 2026", { exact: true })).toBeVisible();
+  await expect(dates.getByText("31 ديسمبر 2026", { exact: true })).toBeVisible();
+
+  // اختيار مدة يستبدل التاريخ القديم، وبعدها يختفي خيار الإبقاء
+  await page.getByRole("link", { name: "تعديل" }).click();
+  await page.getByLabel("مدة الخصم").selectOption("6");
+  await page.getByRole("button", { name: "حفظ" }).click();
+  await expect(page).toHaveURL(`/packages/${id}`);
+  await expect(dates.getByText("10 يوليو 2026", { exact: true })).toBeVisible();
+  await expect(dates.getByText("31 ديسمبر 2026", { exact: true })).toBeVisible();
+
+  await page.getByRole("link", { name: "تعديل" }).click();
+  await expect(page.getByLabel("مدة الخصم")).toHaveValue("6");
+  await expect(page.getByLabel("مدة الخصم").locator("option[value=keep]")).toHaveCount(0);
+  await expect(page.getByLabel("مدة الكاش باك")).toHaveValue("keep");
 });

@@ -8,6 +8,13 @@
       "when": 1789923869983,
       "tag": "0000_youthful_sentinels",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1794644413591,
+      "tag": "0001_true_demogoblin",
+      "breakpoints": true
     }
   ]
 }

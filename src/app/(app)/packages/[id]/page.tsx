@@ -10,7 +10,7 @@ import { ConfirmButton } from "@/components/ui/confirm-button";
 import { isDbConfigured } from "@/db/client";
 import { getPackageWithLines } from "@/db/queries";
 import { lineBilling } from "@/lib/billing";
-import { dateStatus, daysBetween, formatIsoDate, todayRiyadh, type IsoDate } from "@/lib/dates";
+import { dateStatus, daysBetween, durationFromDates, formatIsoDate, todayRiyadh, type IsoDate } from "@/lib/dates";
 import { labels } from "@/lib/labels";
 import { parseId } from "@/lib/validation";
 
@@ -23,12 +23,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title: pkg?.name ?? labels.package.notFound };
 }
 
-function DateBlock({ label, date, today }: { label: string; date: IsoDate | null; today: IsoDate }) {
+function DateBlock({ label, date, today, duration }: { label: string; date: IsoDate | null; today: IsoDate; duration?: number | null }) {
   const status = dateStatus(date, today);
   const days = date && status !== "unset" ? daysBetween(today, date) : null;
   return (
     <div className="flex flex-col gap-1 rounded-lg bg-stone-50 dark:bg-stone-800/50 p-3">
-      <dt className="text-xs text-stone-600 dark:text-stone-400">{label}</dt>
+      <dt className="text-xs text-stone-600 dark:text-stone-400">
+        {label}
+        {duration ? ` · ${labels.package.durations[duration]}` : null}
+      </dt>
       <dd className="flex flex-wrap items-center gap-2">
         <span className="font-medium">{formatIsoDate(date, labels.package.unsetDate)}</span>
         <StatusBadge status={status} />
@@ -72,13 +75,27 @@ export default async function PackagePage({ params }: Props) {
             </form>
           </div>
         </div>
-        <dl className="mt-5 grid gap-3 sm:grid-cols-3">
+        <dl className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" data-testid="package-dates">
           <div className="flex flex-col gap-1 rounded-lg bg-stone-50 dark:bg-stone-800/50 p-3">
             <dt className="text-xs text-stone-600 dark:text-stone-400">{labels.package.discountStart}</dt>
             <dd className="font-medium">{formatIsoDate(pkg.discountStart)}</dd>
           </div>
-          <DateBlock label={labels.package.discountEnd} date={pkg.discountEnd} today={today} />
-          <DateBlock label={labels.package.cashbackEnd} date={pkg.cashbackEnd} today={today} />
+          <DateBlock
+            label={labels.package.discountEnd}
+            date={pkg.discountEnd}
+            today={today}
+            duration={durationFromDates(pkg.discountStart, pkg.discountEnd)}
+          />
+          <div className="flex flex-col gap-1 rounded-lg bg-stone-50 dark:bg-stone-800/50 p-3">
+            <dt className="text-xs text-stone-600 dark:text-stone-400">{labels.package.cashbackStart}</dt>
+            <dd className="font-medium">{formatIsoDate(pkg.cashbackStart, labels.package.unsetDate)}</dd>
+          </div>
+          <DateBlock
+            label={labels.package.cashbackEnd}
+            date={pkg.cashbackEnd}
+            today={today}
+            duration={durationFromDates(pkg.cashbackStart, pkg.cashbackEnd)}
+          />
         </dl>
       </Card>
 

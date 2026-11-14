@@ -4,14 +4,15 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createPackage, deletePackage, updatePackage } from "@/db/mutations";
+import { getPackage } from "@/db/queries";
 import { labels } from "@/lib/labels";
 import { requireSession } from "@/lib/session";
 import { LINE_SLOTS } from "@/lib/slots";
 import {
   PACKAGE_FIELDS,
   PERSON_FIELDS,
-  packageInputSchema,
   parseId,
+  parsePackageForm,
   personFieldName,
   personRowSchema,
   pickFormFields,
@@ -25,8 +26,8 @@ export async function createPackageAction(_prev: FormState, formData: FormData):
   const values: Record<string, string> = { ...pickFormFields(formData, PACKAGE_FIELDS) };
   const fieldErrors: FieldErrors = {};
 
-  const parsed = packageInputSchema.safeParse(values);
-  if (!parsed.success) Object.assign(fieldErrors, z.flattenError(parsed.error).fieldErrors);
+  const parsed = parsePackageForm(values);
+  if (!parsed.ok) Object.assign(fieldErrors, parsed.fieldErrors);
 
   const people: PersonRow[] = [];
   for (const { slot } of LINE_SLOTS) {
@@ -47,7 +48,7 @@ export async function createPackageAction(_prev: FormState, formData: FormData):
     }
   }
 
-  if (!parsed.success || Object.keys(fieldErrors).length > 0) {
+  if (!parsed.ok || Object.keys(fieldErrors).length > 0) {
     return { status: "error", fieldErrors, values };
   }
   const id = await createPackage(parsed.data, people);
@@ -58,9 +59,12 @@ export async function createPackageAction(_prev: FormState, formData: FormData):
 export async function updatePackageAction(id: number, _prev: FormState, formData: FormData): Promise<FormState> {
   await requireSession();
   const values = pickFormFields(formData, PACKAGE_FIELDS);
-  const parsed = packageInputSchema.safeParse(values);
-  if (!parsed.success) {
-    return { status: "error", fieldErrors: z.flattenError(parsed.error).fieldErrors, values };
+  // تواريخ النهاية المخزّنة لازمة لخيار "الإبقاء على التاريخ الحالي" في الباقات القديمة
+  const existing = await getPackage(id);
+  if (!existing) return { status: "error", formError: labels.package.notFound, values };
+  const parsed = parsePackageForm(values, existing);
+  if (!parsed.ok) {
+    return { status: "error", fieldErrors: parsed.fieldErrors, values };
   }
   const ok = await updatePackage(id, parsed.data);
   if (!ok) return { status: "error", formError: labels.package.notFound, values };

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { dateStatus, daysBetween, formatIsoDate, isValidIsoDate, parseIsoDate, todayRiyadh } from "../../src/lib/dates";
+import { addMonths, dateStatus, daysBetween, durationFromDates, formatIsoDate, isValidIsoDate, parseIsoDate, todayRiyadh } from "../../src/lib/dates";
 
 test.describe("parseIsoDate", () => {
   test("يقبل التواريخ الصالحة", () => {
@@ -60,4 +60,41 @@ test("todayRiyadh يحترم RAQI_TODAY خارج Vercel ويحسب بتوقيت 
     if (prevVercel === undefined) delete process.env.VERCEL;
     else process.env.VERCEL = prevVercel;
   }
+});
+
+test.describe("addMonths", () => {
+  test("يحافظ على رقم اليوم", () => {
+    expect(addMonths("2026-01-15", 3)).toBe("2026-04-15");
+    expect(addMonths("2026-01-15", 6)).toBe("2026-07-15");
+    expect(addMonths("2026-01-15", 12)).toBe("2027-01-15");
+  });
+
+  test("يعبر حدود السنة", () => {
+    expect(addMonths("2026-10-05", 3)).toBe("2027-01-05");
+    expect(addMonths("2026-12-01", 6)).toBe("2027-06-01");
+    expect(addMonths("2025-07-20", 6)).toBe("2026-01-20");
+  });
+
+  test("يأخذ آخر يوم في الشهر إن لم يوجد اليوم نفسه", () => {
+    expect(addMonths("2026-01-31", 3)).toBe("2026-04-30");
+    expect(addMonths("2026-08-31", 6)).toBe("2027-02-28");
+    expect(addMonths("2027-08-31", 6)).toBe("2028-02-29"); // 2028 سنة كبيسة
+    expect(addMonths("2028-02-29", 12)).toBe("2029-02-28");
+    expect(addMonths("2026-05-31", 3)).toBe("2026-08-31");
+  });
+
+  test("يرفض التاريخ غير الصالح", () => {
+    expect(() => addMonths("2026-02-30", 3)).toThrow();
+  });
+});
+
+test("durationFromDates يستنتج المدة أو يعيد null للتواريخ اليدوية", () => {
+  expect(durationFromDates("2026-01-15", "2026-04-15")).toBe(3);
+  expect(durationFromDates("2026-01-15", "2026-07-15")).toBe(6);
+  expect(durationFromDates("2026-01-15", "2027-01-15")).toBe(12);
+  expect(durationFromDates("2026-01-31", "2026-04-30")).toBe(3);
+  expect(durationFromDates("2026-01-15", "2027-01-14")).toBeNull();
+  expect(durationFromDates("2026-01-15", null)).toBeNull();
+  expect(durationFromDates(null, "2026-07-15")).toBeNull();
+  expect(durationFromDates("bad", "2026-07-15")).toBeNull();
 });

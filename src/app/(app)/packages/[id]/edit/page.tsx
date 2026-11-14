@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { isDbConfigured } from "@/db/client";
 import { getPackage } from "@/db/queries";
 import { labels } from "@/lib/labels";
-import { parseId } from "@/lib/validation";
+import { packageFormInitial, parseId } from "@/lib/validation";
 
 export const metadata: Metadata = { title: labels.package.edit };
 
@@ -25,13 +25,8 @@ export default async function EditPackagePage({ params }: { params: Promise<{ id
       <Card>
         <PackageForm
           action={updatePackageAction.bind(null, pkg.id)}
-          initial={{
-            name: pkg.name,
-            notes: pkg.notes ?? "",
-            discountStart: pkg.discountStart,
-            discountEnd: pkg.discountEnd ?? "",
-            cashbackEnd: pkg.cashbackEnd ?? "",
-          }}
+          initial={packageFormInitial(pkg)}
+          keepEnds={{ discountEnd: pkg.discountEnd, cashbackEnd: pkg.cashbackEnd }}
           submitLabel={labels.package.save}
           cancelHref={`/packages/${pkg.id}`}
         />

@@ -56,6 +56,38 @@ export function daysBetween(from: IsoDate, to: IsoDate): number {
   return toDayNumber(to) - toDayNumber(from);
 }
 
+/** عدد أيام الشهر (month من 1 إلى 12). */
+function daysInMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+/**
+ * يضيف عدداً من الأشهر مع الحفاظ على رقم اليوم: 15 يناير + 6 أشهر = 15 يوليو.
+ * إن لم يوجد اليوم في الشهر الناتج يُؤخذ آخر يوم فيه: 31 يناير + 3 أشهر = 30 أبريل.
+ */
+export function addMonths(date: IsoDate, months: number): IsoDate {
+  const parts = parseIsoDate(date);
+  if (!parts) throw new Error(`Invalid ISO date: ${date}`);
+  const index = parts.year * 12 + (parts.month - 1) + months;
+  const year = Math.floor(index / 12);
+  const month = (index % 12) + 1;
+  return toIsoDate({ year, month, day: Math.min(parts.day, daysInMonth(year, month)) });
+}
+
+/** المدد المتاحة للخصم والكاش باك (بالأشهر). */
+export const DURATION_MONTHS = [3, 6, 12] as const;
+export type DurationMonths = (typeof DURATION_MONTHS)[number];
+
+export function isDurationMonths(value: unknown): value is DurationMonths {
+  return (DURATION_MONTHS as readonly unknown[]).includes(value);
+}
+
+/** المدة التي تجعل `start + مدة = end`، أو null إذا كان تاريخ النهاية لا يطابق أي مدة متاحة. */
+export function durationFromDates(start: IsoDate | null | undefined, end: IsoDate | null | undefined): DurationMonths | null {
+  if (!start || !end || !isValidIsoDate(start) || !isValidIsoDate(end)) return null;
+  return DURATION_MONTHS.find((months) => addMonths(start, months) === end) ?? null;
+}
+
 /** مثال: "20 سبتمبر 2026" بأرقام لاتينية. */
 export function formatIsoDate(date: IsoDate | null | undefined, fallback = "غير محدد"): string {
   const parts = date ? parseIsoDate(date) : null;

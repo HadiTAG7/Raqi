@@ -18,6 +18,7 @@ export async function createPackage(input: PackageInput, people: PersonRow[] = [
         notes: input.notes,
         discountStart: input.discountStart,
         discountEnd: input.discountEnd,
+        cashbackStart: input.cashbackStart,
         cashbackEnd: input.cashbackEnd,
       })
       .returning({ id: packages.id });
@@ -49,6 +50,7 @@ export async function updatePackage(id: number, input: PackageInput): Promise<bo
       notes: input.notes,
       discountStart: input.discountStart,
       discountEnd: input.discountEnd,
+      cashbackStart: input.cashbackStart,
       cashbackEnd: input.cashbackEnd,
       updatedAt: new Date().toISOString(),
     })

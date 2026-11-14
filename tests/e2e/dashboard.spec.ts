@@ -5,9 +5,12 @@ test("الرئيسية تعرض حالات التواريخ والملخص", asy
   const soon = uniqueName("باقة تنتهي قريباً");
   const ended = uniqueName("باقة منتهية");
   const active = uniqueName("باقة نشطة");
-  await createPackage(page, { name: soon, discountStart: "2025-10-01", discountEnd: "2026-09-30", cashbackEnd: "2026-10-20" });
-  await createPackage(page, { name: ended, discountStart: "2025-01-01", discountEnd: "2026-01-01", cashbackEnd: "2026-08-01" });
-  await createPackage(page, { name: active, discountStart: "2026-09-20", discountEnd: "2027-09-19" });
+  // اليوم المثبّت في الاختبارات: 20 سبتمبر 2026
+  // 30 مارس + 6 أشهر = 30 سبتمبر (بعد 10 أيام)، و20 أبريل + 6 أشهر = 20 أكتوبر (بعد 30 يوماً)
+  await createPackage(page, { name: soon, discountStart: "2026-03-30", discountMonths: 6, cashbackStart: "2026-04-20", cashbackMonths: 6 });
+  // 1 يناير 2025 + سنة = 1 يناير 2026، و1 فبراير + 6 أشهر = 1 أغسطس (قبل 50 يوماً)
+  await createPackage(page, { name: ended, discountStart: "2025-01-01", discountMonths: 12, cashbackStart: "2026-02-01", cashbackMonths: 6 });
+  await createPackage(page, { name: active, discountStart: "2026-09-20", discountMonths: 12 });
 
   await page.goto("/");
   await expect(page.getByText("اليوم: 20 سبتمبر 2026")).toBeVisible();

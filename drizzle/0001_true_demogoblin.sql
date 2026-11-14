@@ -1,0 +1,1 @@
+ALTER TABLE `packages` ADD `cashback_start` text;

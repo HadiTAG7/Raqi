@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { isValidIsoDate } from "./dates";
+import { addMonths, durationFromDates, isValidIsoDate } from "./dates";
 import { labels } from "./labels";
 
 const emptyToNull = (value: unknown) =>
@@ -10,24 +10,120 @@ const optionalIsoDate = z.preprocess(emptyToNull, isoDate.nullable());
 const optionalText = (max: number) =>
   z.preprocess(emptyToNull, z.string().trim().max(max, labels.errors.tooLong).nullable());
 
-export const packageInputSchema = z
-  .object({
-    name: z.string().trim().min(1, labels.errors.required).max(100, labels.errors.tooLong),
-    notes: optionalText(1000),
-    discountStart: z.string().min(1, labels.errors.required).pipe(isoDate),
-    discountEnd: optionalIsoDate,
-    cashbackEnd: optionalIsoDate,
-  })
-  .superRefine((value, ctx) => {
-    if (value.discountEnd && value.discountEnd < value.discountStart) {
-      ctx.addIssue({ code: "custom", path: ["discountEnd"], message: labels.errors.endBeforeStart });
-    }
-    if (value.cashbackEnd && value.cashbackEnd < value.discountStart) {
-      ctx.addIssue({ code: "custom", path: ["cashbackEnd"], message: labels.errors.endBeforeStart });
-    }
-  });
+/** قيمة قائمة المدة في النموذج: فارغة = غير محدد، أو عدد الأشهر، أو keep = الإبقاء على تاريخ قديم. */
+export const DURATION_FIELD_VALUES = ["", "3", "6", "12", "keep"] as const;
+export type DurationFieldValue = (typeof DURATION_FIELD_VALUES)[number];
 
-export type PackageInput = z.infer<typeof packageInputSchema>;
+const durationField = z.enum(DURATION_FIELD_VALUES, { error: labels.errors.invalidDuration });
+
+/** ما يرسله نموذج الباقة: تواريخ التفعيل والمدد، وتواريخ النهاية تُحسب على الخادم. */
+export const packageFormSchema = z.object({
+  name: z.string().trim().min(1, labels.errors.required).max(100, labels.errors.tooLong),
+  notes: optionalText(1000),
+  discountStart: z.string().min(1, labels.errors.required).pipe(isoDate),
+  discountDuration: durationField,
+  cashbackStart: optionalIsoDate,
+  cashbackDuration: durationField,
+});
+
+export type PackageFormInput = z.infer<typeof packageFormSchema>;
+
+/** ما يُحفظ في قاعدة البيانات. */
+export interface PackageInput {
+  name: string;
+  notes: string | null;
+  discountStart: string;
+  discountEnd: string | null;
+  cashbackStart: string | null;
+  cashbackEnd: string | null;
+}
+
+/** تواريخ النهاية المخزّنة حالياً (للتعديل فقط)، يحتاجها خيار "الإبقاء على التاريخ الحالي". */
+export interface ExistingPackageEnds {
+  discountEnd: string | null;
+  cashbackEnd: string | null;
+}
+
+export type PackageParseResult = { ok: true; data: PackageInput } | { ok: false; fieldErrors: FieldErrors };
+
+/** يحسب تواريخ النهاية من تواريخ التفعيل والمدد المختارة. */
+export function resolvePackageDates(form: PackageFormInput, existing?: ExistingPackageEnds | null): PackageParseResult {
+  const fieldErrors: FieldErrors = {};
+
+  let discountEnd: string | null = null;
+  if (form.discountDuration === "keep") {
+    if (!existing?.discountEnd) fieldErrors.discountDuration = [labels.errors.invalidDuration];
+    else if (existing.discountEnd < form.discountStart) fieldErrors.discountDuration = [labels.errors.keepEndBeforeStart];
+    else discountEnd = existing.discountEnd;
+  } else if (form.discountDuration !== "") {
+    discountEnd = addMonths(form.discountStart, Number(form.discountDuration));
+  }
+
+  let cashbackEnd: string | null = null;
+  if (form.cashbackDuration === "keep") {
+    if (!existing?.cashbackEnd) fieldErrors.cashbackDuration = [labels.errors.invalidDuration];
+    else if (form.cashbackStart && existing.cashbackEnd < form.cashbackStart) fieldErrors.cashbackDuration = [labels.errors.keepEndBeforeStart];
+    else cashbackEnd = existing.cashbackEnd;
+  } else if (form.cashbackDuration !== "") {
+    if (!form.cashbackStart) fieldErrors.cashbackStart = [labels.errors.cashbackStartRequired];
+    else cashbackEnd = addMonths(form.cashbackStart, Number(form.cashbackDuration));
+  }
+
+  if (Object.keys(fieldErrors).length > 0) return { ok: false, fieldErrors };
+  return {
+    ok: true,
+    data: {
+      name: form.name,
+      notes: form.notes,
+      discountStart: form.discountStart,
+      discountEnd,
+      cashbackStart: form.cashbackStart,
+      cashbackEnd,
+    },
+  };
+}
+
+/** يتحقق من قيم النموذج ثم يحسب تواريخ النهاية. */
+export function parsePackageForm(values: Record<string, string>, existing?: ExistingPackageEnds | null): PackageParseResult {
+  const parsed = packageFormSchema.safeParse(values);
+  if (!parsed.success) return { ok: false, fieldErrors: z.flattenError(parsed.error).fieldErrors };
+  return resolvePackageDates(parsed.data, existing);
+}
+
+/** قيم حقول نموذج الباقة كنصوص. */
+export interface PackageFormValues {
+  name: string;
+  notes: string;
+  discountStart: string;
+  discountDuration: string;
+  cashbackStart: string;
+  cashbackDuration: string;
+}
+
+function durationFieldFor(start: string | null, end: string | null): DurationFieldValue {
+  if (!end) return "";
+  const months = durationFromDates(start, end);
+  return months ? (String(months) as DurationFieldValue) : "keep";
+}
+
+/** القيم الأولية لنموذج تعديل باقة موجودة: المدة تُستنتج من التاريخين، والتواريخ القديمة اليدوية تصبح keep. */
+export function packageFormInitial(pkg: {
+  name: string;
+  notes: string | null;
+  discountStart: string;
+  discountEnd: string | null;
+  cashbackStart: string | null;
+  cashbackEnd: string | null;
+}): PackageFormValues {
+  return {
+    name: pkg.name,
+    notes: pkg.notes ?? "",
+    discountStart: pkg.discountStart,
+    discountDuration: durationFieldFor(pkg.discountStart, pkg.discountEnd),
+    cashbackStart: pkg.cashbackStart ?? "",
+    cashbackDuration: durationFieldFor(pkg.cashbackStart, pkg.cashbackEnd),
+  };
+}
 
 export const lineInputSchema = z.object({
   holderName: optionalText(100),
@@ -58,7 +154,7 @@ export function personFieldName(slot: number, field: PersonField): string {
   return `${field}_${slot}`;
 }
 
-export const PACKAGE_FIELDS = ["name", "notes", "discountStart", "discountEnd", "cashbackEnd"] as const;
+export const PACKAGE_FIELDS = ["name", "notes", "discountStart", "discountDuration", "cashbackStart", "cashbackDuration"] as const;
 export const LINE_FIELDS = ["holderName", "phoneNumber", "simReference", "billingCycle", "billingStart", "notes"] as const;
 
 /** يحوّل FormData إلى كائن نصي للحقول المطلوبة فقط (القيم الناقصة تصبح ""). */

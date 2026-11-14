@@ -8,6 +8,7 @@ function pkg(overrides: Partial<PackageWithLines> & { id: number; name: string; 
   return {
     notes: null,
     discountEnd: null,
+    cashbackStart: null,
     cashbackEnd: null,
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",

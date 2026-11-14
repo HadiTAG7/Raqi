@@ -14,6 +14,9 @@ export const E2E_ENV = {
 
 export const AUTH_STATE = "tests/.auth/state.json";
 
+// اختياري: مسار متصفح Chromium مثبّت مسبقاً إذا كان إصداره يختلف عن الذي يتوقعه Playwright
+const chromiumPath = process.env.PW_CHROMIUM_PATH;
+
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: false,
@@ -29,6 +32,7 @@ export default defineConfig({
     timezoneId: "Asia/Riyadh",
     trace: "retain-on-failure",
     ...devices["Desktop Chrome"],
+    ...(chromiumPath ? { launchOptions: { executablePath: chromiumPath } } : {}),
   },
   projects: [
     { name: "setup", testMatch: /auth\.setup\.ts$/ },

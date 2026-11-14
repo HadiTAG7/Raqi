@@ -9,9 +9,11 @@ export const packages = sqliteTable("packages", {
   notes: text("notes"),
   /** تاريخ تفعيل الخصم (YYYY-MM-DD) */
   discountStart: text("discount_start").notNull(),
-  /** تاريخ نهاية الخصم (YYYY-MM-DD) */
+  /** تاريخ نهاية الخصم (YYYY-MM-DD)، يُحسب من تاريخ التفعيل + المدة المختارة */
   discountEnd: text("discount_end"),
-  /** تاريخ نهاية الكاش باك (YYYY-MM-DD) */
+  /** تاريخ تفعيل الكاش باك (YYYY-MM-DD) */
+  cashbackStart: text("cashback_start"),
+  /** تاريخ نهاية الكاش باك (YYYY-MM-DD)، يُحسب من تاريخ تفعيله + المدة المختارة */
   cashbackEnd: text("cashback_end"),
   createdAt: text("created_at").notNull().$defaultFn(nowIso),
   updatedAt: text("updated_at").notNull().$defaultFn(nowIso),
