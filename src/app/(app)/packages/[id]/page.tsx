@@ -116,6 +116,7 @@ export default async function PackagePage({ params }: Props) {
                 phoneNumber: line.phoneNumber,
                 simReference: line.simReference,
                 billingCycle: line.billingCycle,
+                amountHalalas: line.amountHalalas,
                 billingStart: line.billingStart,
                 notes: line.notes,
               }}

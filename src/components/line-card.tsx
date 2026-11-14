@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { updateLineAction } from "@/actions/lines";
 import { PaymentGrid } from "@/components/payment-grid";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,8 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { formatIsoDate } from "@/lib/dates";
 import { labels } from "@/lib/labels";
-import type { BillingCycle } from "@/lib/periods";
+import { amountToInput, formatAmount } from "@/lib/money";
+import type { LineCycle } from "@/lib/periods";
 import { LINE_TYPE_LABELS, type LineType } from "@/lib/slots";
 import { idleFormState } from "@/lib/validation";
 
@@ -20,7 +21,9 @@ export interface LineCardData {
   holderName: string | null;
   phoneNumber: string | null;
   simReference: string | null;
-  billingCycle: BillingCycle;
+  billingCycle: LineCycle;
+  /** مبلغ الفاتورة الواحدة بالهللات */
+  amountHalalas: number | null;
   billingStart: string | null;
   notes: string | null;
 }
@@ -44,12 +47,16 @@ export function LineCard({
     phoneNumber: line.phoneNumber ?? "",
     simReference: line.simReference ?? "",
     billingCycle: line.billingCycle,
+    amount: amountToInput(line.amountHalalas),
     billingStart: line.billingStart ?? "",
     notes: line.notes ?? "",
     ...(state.values ?? {}),
   };
   const errorFor = (field: string) => state.fieldErrors?.[field]?.[0];
   const prefix = `line-${line.id}`;
+  // الدورة المختارة حالياً في القائمة (قبل الحفظ): تعطّل خانة المبلغ عند "مجانية"
+  const [selectedCycle, setSelectedCycle] = useState<string>(line.billingCycle);
+  const isFree = line.billingCycle === "free";
 
   return (
     <Card id={`line-${line.slot}`} className="flex flex-col gap-5">
@@ -57,6 +64,7 @@ export function LineCard({
         <div className="flex flex-wrap items-center gap-2">
           <CardTitle>{labels.line.slot(line.slot)}</CardTitle>
           <Badge tone={line.type === "primary" ? "info" : "neutral"}>{LINE_TYPE_LABELS[line.type]}</Badge>
+          {isFree ? <Badge tone="success">{labels.line.free}</Badge> : null}
         </div>
         <span className="text-sm text-stone-600 dark:text-stone-400">
           {line.holderName || labels.line.empty}
@@ -80,15 +88,34 @@ export function LineCard({
           <Input id={`${prefix}-simReference`} name="simReference" defaultValue={values.simReference} dir="ltr" inputMode="numeric" maxLength={60} className="ltr-digits" />
         </Field>
         <Field label={labels.line.billingCycle} htmlFor={`${prefix}-billingCycle`} error={errorFor("billingCycle")}>
-          <Select id={`${prefix}-billingCycle`} name="billingCycle" defaultValue={values.billingCycle}>
+          <Select id={`${prefix}-billingCycle`} name="billingCycle" defaultValue={values.billingCycle} onChange={(event) => setSelectedCycle(event.target.value)}>
             <option value="monthly">{labels.line.monthly}</option>
             <option value="yearly">{labels.line.yearly}</option>
+            <option value="free">{labels.line.free}</option>
           </Select>
+        </Field>
+        <Field
+          label={labels.line.amount}
+          htmlFor={`${prefix}-amount`}
+          error={errorFor("amount")}
+          hint={selectedCycle === "free" ? labels.line.amountFreeHint : undefined}
+        >
+          <Input
+            id={`${prefix}-amount`}
+            name="amount"
+            defaultValue={values.amount}
+            dir="ltr"
+            inputMode="decimal"
+            maxLength={12}
+            className="ltr-digits"
+            disabled={selectedCycle === "free"}
+            aria-invalid={errorFor("amount") ? true : undefined}
+          />
         </Field>
         <Field label={labels.line.billingStart} htmlFor={`${prefix}-billingStart`} error={errorFor("billingStart")} hint={labels.line.billingStartHint}>
           <Input id={`${prefix}-billingStart`} name="billingStart" type="date" defaultValue={values.billingStart} dir="ltr" />
         </Field>
-        <Field label={labels.line.notes} htmlFor={`${prefix}-notes`} error={errorFor("notes")} className="sm:col-span-2 lg:col-span-1">
+        <Field label={labels.line.notes} htmlFor={`${prefix}-notes`} error={errorFor("notes")} className="sm:col-span-2 lg:col-span-3">
           <Textarea id={`${prefix}-notes`} name="notes" defaultValue={values.notes} maxLength={500} className="min-h-10" rows={1} />
         </Field>
         <div className="flex items-center gap-3 sm:col-span-2 lg:col-span-3">
@@ -111,14 +138,21 @@ export function LineCard({
       <section aria-label={labels.payments.title} className="border-t border-stone-200 dark:border-stone-800 pt-4">
         <h3 className="mb-3 text-sm font-semibold text-stone-800 dark:text-stone-200">
           {labels.payments.title}
-          <span className="ms-2 text-xs font-normal text-stone-500 dark:text-stone-400">
-            ({line.billingCycle === "monthly" ? labels.line.monthly : labels.line.yearly} · {labels.line.billingStart}: {formatIsoDate(effectiveStart)})
-          </span>
+          {line.billingCycle === "free" ? null : (
+            <span className="ms-2 text-xs font-normal text-stone-500 dark:text-stone-400">
+              ({labels.line[line.billingCycle]}
+              {line.amountHalalas != null ? ` · ${labels.payments.perInvoice(formatAmount(line.amountHalalas))}` : ""} · {labels.line.billingStart}: {formatIsoDate(effectiveStart)})
+            </span>
+          )}
         </h3>
-        {startsInFuture ? (
+        {line.billingCycle === "free" ? (
+          <p className="text-sm text-stone-600 dark:text-stone-400" data-testid="free-note">
+            {labels.payments.freeNote}
+          </p>
+        ) : startsInFuture ? (
           <p className="text-sm text-stone-600 dark:text-stone-400">{labels.payments.startsInFuture(formatIsoDate(effectiveStart))}</p>
         ) : (
-          <PaymentGrid lineId={line.id} cycle={line.billingCycle} periods={periods} paidPeriods={paidPeriods} />
+          <PaymentGrid lineId={line.id} cycle={line.billingCycle} periods={periods} paidPeriods={paidPeriods} amountHalalas={line.amountHalalas} />
         )}
       </section>
     </Card>

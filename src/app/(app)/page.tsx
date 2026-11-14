@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, CalendarClock, Layers, PlusCircle, Smartphone } from "lucide-react";
+import { AlertTriangle, CalendarClock, Layers, PlusCircle, Smartphone, Wallet } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { getAllPackages } from "@/db/queries";
 import { buildDashboard, type DateKind } from "@/lib/dashboard";
 import { formatIsoDate, todayRiyadh } from "@/lib/dates";
 import { labels } from "@/lib/labels";
+import { CURRENCY_LABEL, formatAmount, formatAmountNumber } from "@/lib/money";
 import { formatPeriod } from "@/lib/periods";
 import { LINE_TYPE_LABELS } from "@/lib/slots";
 
@@ -27,11 +28,13 @@ export default async function DashboardPage() {
   const packages = await getAllPackages();
   const data = buildDashboard(packages, today);
 
-  const tiles = [
+  const tiles: Array<{ label: string; value: number | string; unit?: string; Icon: typeof Layers; wide?: boolean }> = [
     { label: labels.dashboard.tiles.packages, value: data.tiles.packages, Icon: Layers },
     { label: labels.dashboard.tiles.lines, value: data.tiles.lines, Icon: Smartphone },
     { label: labels.dashboard.tiles.unpaid, value: data.tiles.unpaidCurrent, Icon: AlertTriangle },
     { label: labels.dashboard.tiles.endingSoon, value: data.tiles.endingSoon, Icon: CalendarClock },
+    // مجموع (الفترات غير المدفوعة × مبلغ الفاتورة) لكل الأشخاص الذين حُدّد لهم مبلغ
+    { label: labels.dashboard.tiles.totalDue, value: formatAmountNumber(data.tiles.totalDueHalalas), unit: CURRENCY_LABEL, Icon: Wallet, wide: true },
   ];
 
   return (
@@ -49,15 +52,16 @@ export default async function DashboardPage() {
         </LinkButton>
       </div>
 
-      <section aria-label="ملخص" className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {tiles.map(({ label, value, Icon }) => (
-          <Card key={label} className="flex flex-col gap-2 p-4" data-testid="tile">
+      <section aria-label="ملخص" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {tiles.map(({ label, value, unit, Icon, wide }) => (
+          <Card key={label} className={`flex flex-col gap-2 p-4${wide ? " col-span-2 sm:col-span-1" : ""}`} data-testid="tile">
             <div className="flex items-center justify-between gap-2 text-sm text-stone-600 dark:text-stone-400">
               <span>{label}</span>
               <Icon className="size-4 text-stone-400 dark:text-stone-500" aria-hidden />
             </div>
-            <p className="text-3xl font-semibold text-stone-900 dark:text-stone-100" data-testid="tile-value">
+            <p className="mt-auto text-3xl font-semibold text-stone-900 dark:text-stone-100" data-testid="tile-value">
               {value}
+              {unit ? <span className="ms-1.5 text-base font-medium text-stone-600 dark:text-stone-400">{unit}</span> : null}
             </p>
           </Card>
         ))}
@@ -132,6 +136,7 @@ export default async function DashboardPage() {
                               </span>
                               {item.holderName ? <span>· {item.holderName}</span> : null}
                               <span className="text-amber-700 dark:text-amber-400">· {formatPeriod(item.period, item.cycle)}</span>
+                              {item.dueHalalas ? <span className="font-medium">· {labels.payments.due(formatAmount(item.dueHalalas))}</span> : null}
                             </Link>
                           </li>
                         ))}
@@ -186,6 +191,11 @@ export default async function DashboardPage() {
                     <div className="mt-3 border-t border-stone-200 dark:border-stone-800 pt-3">
                       <p className="mb-1.5 text-xs font-medium text-stone-600 dark:text-stone-400">
                         {labels.people.title} <span className="ltr-digits">({pkg.filledLines}/5)</span>
+                        {pkg.dueHalalas > 0 ? (
+                          <span className="ms-2 text-amber-800 dark:text-amber-300" data-testid="package-due">
+                            {labels.payments.due(formatAmount(pkg.dueHalalas))}
+                          </span>
+                        ) : null}
                       </p>
                       <ul className="grid gap-1 text-sm" data-testid="package-people">
                         {pkg.people.map((person) => (
@@ -195,6 +205,11 @@ export default async function DashboardPage() {
                               <span className={person.holderName ? "truncate text-stone-900 dark:text-stone-100" : "text-stone-500 dark:text-stone-400"}>
                                 {person.holderName || (person.phoneNumber ? labels.people.unnamed : labels.people.empty)}
                               </span>
+                              {person.free ? (
+                                <Badge tone="success">{labels.line.free}</Badge>
+                              ) : person.dueHalalas ? (
+                                <span className="shrink-0 text-xs font-medium text-amber-800 dark:text-amber-300">{formatAmount(person.dueHalalas)}</span>
+                              ) : null}
                             </span>
                             {person.phoneNumber ? (
                               <span className="ltr-digits shrink-0 text-xs text-stone-600 dark:text-stone-400">{person.phoneNumber}</span>

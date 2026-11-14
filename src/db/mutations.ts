@@ -34,6 +34,7 @@ export async function createPackage(input: PackageInput, people: PersonRow[] = [
           phoneNumber: person?.phoneNumber ?? null,
           simReference: person?.simReference ?? null,
           billingCycle: person?.billingCycle ?? "monthly",
+          amountHalalas: person?.amount ?? null,
         };
       }),
     );
@@ -89,6 +90,7 @@ export async function updateLine(id: number, input: LineInput): Promise<boolean>
       phoneNumber: input.phoneNumber,
       simReference: input.simReference,
       billingCycle: input.billingCycle,
+      amountHalalas: input.amount,
       billingStart: input.billingStart,
       notes: input.notes,
     })

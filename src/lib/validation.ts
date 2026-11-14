@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { addMonths, durationFromDates, isValidIsoDate } from "./dates";
 import { labels } from "./labels";
+import { parseAmount } from "./money";
+import { LINE_CYCLES, type LineCycle } from "./periods";
 
 const emptyToNull = (value: unknown) =>
   typeof value === "string" && value.trim() === "" ? null : value;
@@ -125,28 +127,48 @@ export function packageFormInitial(pkg: {
   };
 }
 
-export const lineInputSchema = z.object({
-  holderName: optionalText(100),
-  phoneNumber: optionalText(30),
-  simReference: optionalText(60),
-  billingCycle: z.enum(["monthly", "yearly"]),
-  billingStart: optionalIsoDate,
-  notes: optionalText(500),
-});
+/** نص المبلغ ← هللات (أو null إن تُرك فارغاً). */
+const amountField = z
+  .string()
+  .refine((value) => parseAmount(value).ok, { message: labels.errors.invalidAmount })
+  .transform((value) => {
+    const parsed = parseAmount(value);
+    return parsed.ok ? parsed.halalas : null;
+  });
+
+/** الشريحة المجانية لا مبلغ عليها مهما أُرسل في الحقل. */
+function clearAmountWhenFree<T extends { billingCycle: LineCycle; amount: number | null }>(line: T): T {
+  return line.billingCycle === "free" ? { ...line, amount: null } : line;
+}
+
+export const lineInputSchema = z
+  .object({
+    holderName: optionalText(100),
+    phoneNumber: optionalText(30),
+    simReference: optionalText(60),
+    billingCycle: z.enum(LINE_CYCLES),
+    amount: amountField,
+    billingStart: optionalIsoDate,
+    notes: optionalText(500),
+  })
+  .transform(clearAmountWhenFree);
 
 export type LineInput = z.infer<typeof lineInputSchema>;
 
 /** بيانات الشخص (صاحب الشريحة) التي تُسجَّل مع إنشاء الباقة. */
-export const personRowSchema = z.object({
-  holderName: optionalText(100),
-  phoneNumber: optionalText(30),
-  simReference: optionalText(60),
-  billingCycle: z.preprocess((v) => (v === "" || v == null ? "monthly" : v), z.enum(["monthly", "yearly"])),
-});
+export const personRowSchema = z
+  .object({
+    holderName: optionalText(100),
+    phoneNumber: optionalText(30),
+    simReference: optionalText(60),
+    billingCycle: z.preprocess((v) => (v === "" || v == null ? "monthly" : v), z.enum(LINE_CYCLES)),
+    amount: amountField,
+  })
+  .transform(clearAmountWhenFree);
 
 export type PersonRow = z.infer<typeof personRowSchema> & { slot: number };
 
-export const PERSON_FIELDS = ["holderName", "phoneNumber", "simReference", "billingCycle"] as const;
+export const PERSON_FIELDS = ["holderName", "phoneNumber", "simReference", "billingCycle", "amount"] as const;
 export type PersonField = (typeof PERSON_FIELDS)[number];
 
 /** اسم حقل النموذج لشخص في شريحة معيّنة، مثل holderName_1 */
@@ -155,7 +177,7 @@ export function personFieldName(slot: number, field: PersonField): string {
 }
 
 export const PACKAGE_FIELDS = ["name", "notes", "discountStart", "discountDuration", "cashbackStart", "cashbackDuration"] as const;
-export const LINE_FIELDS = ["holderName", "phoneNumber", "simReference", "billingCycle", "billingStart", "notes"] as const;
+export const LINE_FIELDS = ["holderName", "phoneNumber", "simReference", "billingCycle", "amount", "billingStart", "notes"] as const;
 
 /** يحوّل FormData إلى كائن نصي للحقول المطلوبة فقط (القيم الناقصة تصبح ""). */
 export function pickFormFields<K extends string>(formData: FormData, keys: readonly K[]): Record<K, string> {

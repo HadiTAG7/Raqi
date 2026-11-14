@@ -34,3 +34,22 @@ test("بداية مستقبلية تعطي شبكة فارغة ولا تُحسب
   expect(result.unpaid).toEqual([]);
   expect(result.currentPaid).toBe(true);
 });
+
+test("الشريحة المجانية: لا فترات ولا مستحق حتى مع دفعات أو مبلغ سابق", () => {
+  const result = lineBilling({ billingStart: null, billingCycle: "free", amountHalalas: 5000, payments: [{ period: "2026-07" }] }, pkg, today);
+  expect(result).toMatchObject({ free: true, cycle: null, periods: [], unpaid: [], currentPaid: true, startsInFuture: false, amountHalalas: null, dueHalalas: null });
+});
+
+test("المستحق = عدد الفترات غير المدفوعة × مبلغ الفاتورة", () => {
+  const withAmount = lineBilling({ billingStart: null, billingCycle: "monthly", amountHalalas: 5000, payments: [{ period: "2026-07" }] }, pkg, today);
+  expect(withAmount).toMatchObject({ free: false, cycle: "monthly", unpaid: ["2026-06", "2026-08", "2026-09"], amountHalalas: 5000, dueHalalas: 15000 });
+
+  const allPaid = lineBilling({ billingStart: "2026-09-01", billingCycle: "monthly", amountHalalas: 5000, payments: [{ period: "2026-09" }] }, pkg, today);
+  expect(allPaid.dueHalalas).toBe(0);
+
+  const noAmount = lineBilling({ billingStart: null, billingCycle: "monthly", payments: [] }, pkg, today);
+  expect(noAmount).toMatchObject({ amountHalalas: null, dueHalalas: null });
+
+  const future = lineBilling({ billingStart: "2026-11-01", billingCycle: "monthly", amountHalalas: 5000, payments: [] }, pkg, today);
+  expect(future.dueHalalas).toBe(0);
+});

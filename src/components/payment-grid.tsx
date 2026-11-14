@@ -5,6 +5,7 @@ import { Check } from "lucide-react";
 import { togglePaymentAction } from "@/actions/payments";
 import { Button } from "@/components/ui/button";
 import { labels } from "@/lib/labels";
+import { formatAmount } from "@/lib/money";
 import { formatPeriod, type BillingCycle } from "@/lib/periods";
 
 const DEFAULT_VISIBLE = 12;
@@ -14,12 +15,15 @@ export function PaymentGrid({
   cycle,
   periods,
   paidPeriods,
+  amountHalalas = null,
 }: {
   lineId: number;
   cycle: BillingCycle;
   /** الفترات تصاعدياً من البداية حتى اليوم */
   periods: string[];
   paidPeriods: string[];
+  /** مبلغ الفاتورة الواحدة بالهللات؛ إن وُجد يُعرض المستحق = غير المدفوع × المبلغ */
+  amountHalalas?: number | null;
 }) {
   const [optimisticPaid, applyOptimistic] = useOptimistic(
     paidPeriods,
@@ -50,6 +54,9 @@ export function PaymentGrid({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className={`text-sm font-medium ${unpaidCount > 0 ? "text-amber-800 dark:text-amber-300" : "text-emerald-800 dark:text-emerald-300"}`}>
           {labels.payments.unpaidCount(unpaidCount)}
+          {amountHalalas != null && unpaidCount > 0 ? (
+            <span data-testid="line-due"> · {labels.payments.due(formatAmount(unpaidCount * amountHalalas))}</span>
+          ) : null}
         </p>
         <p className="text-xs text-stone-500 dark:text-stone-400">{labels.payments.toggleHint}</p>
       </div>

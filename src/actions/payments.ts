@@ -21,6 +21,7 @@ export async function togglePaymentAction(lineId: number, period: string): Promi
   if (!pkg) return { ok: false, error: labels.payments.error };
 
   const cycle = line.billingCycle;
+  if (cycle === "free") return { ok: false, error: labels.payments.error };
   if (!isValidPeriod(period, cycle)) return { ok: false, error: labels.payments.error };
 
   const today = todayRiyadh();

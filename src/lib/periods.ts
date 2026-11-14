@@ -1,6 +1,11 @@
 import { parseIsoDate, type IsoDate, ARABIC_MONTHS } from "./dates";
 
+/** دورات الفوترة التي لها فترات ودفعات. */
 export type BillingCycle = "monthly" | "yearly";
+
+/** دورة فاتورة الشريحة: شهرية أو سنوية، أو مجانية (لا فواتير عليها). */
+export type LineCycle = BillingCycle | "free";
+export const LINE_CYCLES = ["monthly", "yearly", "free"] as const;
 
 const MONTHLY_RE = /^(\d{4})-(\d{2})$/;
 const YEARLY_RE = /^(\d{4})$/;

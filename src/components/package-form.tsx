@@ -80,6 +80,8 @@ export function PackageForm({
   // خيار الإبقاء يظهر فقط إذا كانت الباقة فُتحت بتاريخ نهاية قديم لا يطابق أي مدة
   const keepDiscountEnd = initial.discountDuration === "keep" ? keepEnds?.discountEnd : null;
   const keepCashbackEnd = initial.cashbackDuration === "keep" ? keepEnds?.cashbackEnd : null;
+  // دورة الفاتورة المختارة لكل شخص (حسب رقم الشريحة): تعطّل خانة المبلغ عند "مجانية"
+  const [cycles, setCycles] = useState<Record<number, string>>({});
 
   return (
     <form ref={formRef} action={formAction} className="flex flex-col gap-5" noValidate>
@@ -142,7 +144,7 @@ export function PackageForm({
                   {labels.line.slot(slot)}
                   <Badge tone={type === "primary" ? "info" : "neutral"}>{LINE_TYPE_LABELS[type]}</Badge>
                 </legend>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   <Field label={labels.line.holderName} htmlFor={id("holderName")} error={errorFor(id("holderName"))}>
                     <Input id={id("holderName")} name={id("holderName")} defaultValue={values[id("holderName")] ?? ""} aria-invalid={errorFor(id("holderName")) ? true : undefined} maxLength={100} />
                   </Field>
@@ -153,10 +155,35 @@ export function PackageForm({
                     <Input id={id("simReference")} name={id("simReference")} defaultValue={values[id("simReference")] ?? ""} aria-invalid={errorFor(id("simReference")) ? true : undefined} dir="ltr" inputMode="numeric" maxLength={60} className="ltr-digits" />
                   </Field>
                   <Field label={labels.line.billingCycle} htmlFor={id("billingCycle")} error={errorFor(id("billingCycle"))}>
-                    <Select id={id("billingCycle")} name={id("billingCycle")} defaultValue={values[id("billingCycle")] || "monthly"} aria-invalid={errorFor(id("billingCycle")) ? true : undefined}>
+                    <Select
+                      id={id("billingCycle")}
+                      name={id("billingCycle")}
+                      defaultValue={values[id("billingCycle")] || "monthly"}
+                      onChange={(event) => setCycles((current) => ({ ...current, [slot]: event.target.value }))}
+                      aria-invalid={errorFor(id("billingCycle")) ? true : undefined}
+                    >
                       <option value="monthly">{labels.line.monthly}</option>
                       <option value="yearly">{labels.line.yearly}</option>
+                      <option value="free">{labels.line.free}</option>
                     </Select>
+                  </Field>
+                  <Field
+                    label={labels.line.amount}
+                    htmlFor={id("amount")}
+                    error={errorFor(id("amount"))}
+                    hint={(cycles[slot] ?? values[id("billingCycle")]) === "free" ? labels.line.amountFreeHint : undefined}
+                  >
+                    <Input
+                      id={id("amount")}
+                      name={id("amount")}
+                      defaultValue={values[id("amount")] ?? ""}
+                      dir="ltr"
+                      inputMode="decimal"
+                      maxLength={12}
+                      className="ltr-digits"
+                      disabled={(cycles[slot] ?? values[id("billingCycle")]) === "free"}
+                      aria-invalid={errorFor(id("amount")) ? true : undefined}
+                    />
                   </Field>
                 </div>
               </fieldset>

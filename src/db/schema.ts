@@ -32,7 +32,10 @@ export const lines = sqliteTable(
     holderName: text("holder_name"),
     phoneNumber: text("phone_number"),
     simReference: text("sim_reference"),
-    billingCycle: text("billing_cycle", { enum: ["monthly", "yearly"] }).notNull().default("monthly"),
+    /** دورة الفاتورة؛ free = شريحة مجانية بلا فواتير */
+    billingCycle: text("billing_cycle", { enum: ["monthly", "yearly", "free"] }).notNull().default("monthly"),
+    /** مبلغ الفاتورة الواحدة بالهللات (1 ريال = 100 هللة)؛ فارغ = غير محدد */
+    amountHalalas: integer("amount_halalas"),
     /** بداية الفوترة (YYYY-MM-DD)؛ إن كانت فارغة يُستخدم discount_start للباقة */
     billingStart: text("billing_start"),
     notes: text("notes"),

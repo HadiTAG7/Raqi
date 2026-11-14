@@ -1,0 +1,1 @@
+ALTER TABLE `lines` ADD `amount_halalas` integer;

@@ -24,6 +24,8 @@ export interface UnpaidItem {
   holderName: string | null;
   cycle: BillingCycle;
   period: string;
+  /** إجمالي المستحق على الشريحة (كل الفترات غير المدفوعة)، أو null إن لم يُحدَّد مبلغ */
+  dueHalalas: number | null;
 }
 
 export interface PackageSummary {
@@ -36,8 +38,21 @@ export interface PackageSummary {
   cashbackStatus: DateStatus;
   filledLines: number;
   unpaidPeriods: number;
+  /** مجموع المستحق على أشخاص الباقة بالهللات */
+  dueHalalas: number;
   /** الأشخاص (أصحاب الشرائح) بترتيب الشرائح */
-  people: Array<{ slot: number; type: LineType; holderName: string | null; phoneNumber: string | null }>;
+  people: PersonSummary[];
+}
+
+export interface PersonSummary {
+  slot: number;
+  type: LineType;
+  holderName: string | null;
+  phoneNumber: string | null;
+  /** شريحة مجانية بلا فواتير */
+  free: boolean;
+  /** المستحق عليه بالهللات، أو null إن لم يُحدَّد مبلغ */
+  dueHalalas: number | null;
 }
 
 export interface UnpaidGroup {
@@ -47,7 +62,7 @@ export interface UnpaidGroup {
 }
 
 export interface DashboardData {
-  tiles: { packages: number; lines: number; unpaidCurrent: number; endingSoon: number };
+  tiles: { packages: number; lines: number; unpaidCurrent: number; endingSoon: number; totalDueHalalas: number };
   upcoming: UpcomingDate[];
   unpaid: UnpaidItem[];
   /** نفس عناصر unpaid مجمّعة حسب الباقة لعرض أكثر إيجازاً */
@@ -65,6 +80,7 @@ export function buildDashboard(pkgs: PackageWithLines[], today: IsoDate): Dashbo
   const unpaid: UnpaidItem[] = [];
   const summaries: PackageSummary[] = [];
   let lineCount = 0;
+  let totalDueHalalas = 0;
 
   for (const pkg of pkgs) {
     for (const kind of ["discountEnd", "cashbackEnd"] as const) {
@@ -76,11 +92,23 @@ export function buildDashboard(pkgs: PackageWithLines[], today: IsoDate): Dashbo
     }
 
     let unpaidPeriods = 0;
-    for (const line of pkg.lines) {
+    let packageDueHalalas = 0;
+    const people: PersonSummary[] = [];
+    for (const line of [...pkg.lines].sort((a, b) => a.slot - b.slot)) {
       lineCount += 1;
       const billing = lineBilling(line, pkg, today);
       unpaidPeriods += billing.unpaid.length;
-      if (!billing.currentPaid) {
+      packageDueHalalas += billing.dueHalalas ?? 0;
+      people.push({
+        slot: line.slot,
+        type: line.type,
+        holderName: line.holderName,
+        phoneNumber: line.phoneNumber,
+        free: billing.free,
+        dueHalalas: billing.dueHalalas,
+      });
+      // الشريحة المجانية ليس لها دورة (cycle = null) فلا تدخل قائمة غير المدفوع
+      if (billing.cycle && !billing.currentPaid) {
         unpaid.push({
           packageId: pkg.id,
           packageName: pkg.name,
@@ -88,11 +116,13 @@ export function buildDashboard(pkgs: PackageWithLines[], today: IsoDate): Dashbo
           slot: line.slot,
           type: line.type,
           holderName: line.holderName,
-          cycle: line.billingCycle,
+          cycle: billing.cycle,
           period: billing.currentPeriod,
+          dueHalalas: billing.dueHalalas,
         });
       }
     }
+    totalDueHalalas += packageDueHalalas;
 
     summaries.push({
       id: pkg.id,
@@ -104,9 +134,8 @@ export function buildDashboard(pkgs: PackageWithLines[], today: IsoDate): Dashbo
       cashbackStatus: dateStatus(pkg.cashbackEnd, today),
       filledLines: pkg.lines.filter(isFilled).length,
       unpaidPeriods,
-      people: [...pkg.lines]
-        .sort((a, b) => a.slot - b.slot)
-        .map((l) => ({ slot: l.slot, type: l.type, holderName: l.holderName, phoneNumber: l.phoneNumber })),
+      dueHalalas: packageDueHalalas,
+      people,
     });
   }
 
@@ -131,6 +160,7 @@ export function buildDashboard(pkgs: PackageWithLines[], today: IsoDate): Dashbo
       lines: lineCount,
       unpaidCurrent: unpaid.length,
       endingSoon: upcoming.filter((u) => u.status === "ending_soon").length,
+      totalDueHalalas,
     },
     upcoming,
     unpaid,
