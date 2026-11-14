@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, CalendarClock, Layers, PlusCircle, Smartphone, Wallet } from "lucide-react";
+import { AlertTriangle, Building2, CalendarClock, Layers, PlusCircle, Smartphone, Wallet } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
@@ -35,6 +35,8 @@ export default async function DashboardPage() {
     { label: labels.dashboard.tiles.endingSoon, value: data.tiles.endingSoon, Icon: CalendarClock },
     // مجموع (الفترات غير المدفوعة × مبلغ الفاتورة) لكل الأشخاص الذين حُدّد لهم مبلغ
     { label: labels.dashboard.tiles.totalDue, value: formatAmountNumber(data.tiles.totalDueHalalas), unit: CURRENCY_LABEL, Icon: Wallet, wide: true },
+    // مجموع فواتير الباقات (التي سُجّل مبلغها) غير المدفوعة للشركة
+    { label: labels.dashboard.tiles.companyOwed, value: formatAmountNumber(data.tiles.companyOwedHalalas), unit: CURRENCY_LABEL, Icon: Building2, wide: true },
   ];
 
   return (
@@ -52,7 +54,7 @@ export default async function DashboardPage() {
         </LinkButton>
       </div>
 
-      <section aria-label="ملخص" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <section aria-label="ملخص" className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {tiles.map(({ label, value, unit, Icon, wide }) => (
           <Card key={label} className={`flex flex-col gap-2 p-4${wide ? " col-span-2 sm:col-span-1" : ""}`} data-testid="tile">
             <div className="flex items-center justify-between gap-2 text-sm text-stone-600 dark:text-stone-400">
@@ -187,6 +189,14 @@ export default async function DashboardPage() {
                           <StatusBadge status={pkg.cashbackStatus} />
                         </dd>
                       </div>
+                      {pkg.companyOwedHalalas > 0 ? (
+                        <div className="flex items-center justify-between gap-2">
+                          <dt className="text-stone-600 dark:text-stone-400">{labels.packageBill.owed}</dt>
+                          <dd className="font-medium text-amber-800 dark:text-amber-300" data-testid="package-company-owed">
+                            {formatAmount(pkg.companyOwedHalalas)}
+                          </dd>
+                        </div>
+                      ) : null}
                     </dl>
                     <div className="mt-3 border-t border-stone-200 dark:border-stone-800 pt-3">
                       <p className="mb-1.5 text-xs font-medium text-stone-600 dark:text-stone-400">

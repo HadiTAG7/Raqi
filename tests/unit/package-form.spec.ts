@@ -6,8 +6,16 @@ const base = { name: "باقة", notes: "", discountStart: "2026-01-15", discoun
 test("بدون مدد: لا تواريخ نهاية", () => {
   expect(parsePackageForm(base)).toEqual({
     ok: true,
-    data: { name: "باقة", notes: null, discountStart: "2026-01-15", discountEnd: null, cashbackStart: null, cashbackEnd: null },
+    data: { name: "باقة", notes: null, discountStart: "2026-01-15", discountEnd: null, cashbackStart: null, cashbackEnd: null, billCycle: "monthly" },
   });
+});
+
+test("دورة فاتورة الباقة: شهرية افتراضياً، وسنوية عند اختيارها، وغيرها مرفوض", () => {
+  expect(parsePackageForm({ ...base, billCycle: "" })).toMatchObject({ ok: true, data: { billCycle: "monthly" } });
+  expect(parsePackageForm({ ...base, billCycle: "yearly" })).toMatchObject({ ok: true, data: { billCycle: "yearly" } });
+  const bad = parsePackageForm({ ...base, billCycle: "free" });
+  expect(bad.ok).toBe(false);
+  if (!bad.ok) expect(Object.keys(bad.fieldErrors)).toEqual(["billCycle"]);
 });
 
 test("النهاية تُحسب من التفعيل + المدة لكل من الخصم والكاش باك", () => {
@@ -57,8 +65,8 @@ test("keep: يُبقي التاريخ المخزّن في التعديل فقط"
 });
 
 test("packageFormInitial يستنتج المدة ويعلّم التواريخ اليدوية بـ keep", () => {
-  const pkg = { name: "أ", notes: null, discountStart: "2026-01-15", discountEnd: "2026-07-15", cashbackStart: "2026-02-01", cashbackEnd: "2026-05-01" };
-  expect(packageFormInitial(pkg)).toEqual({ name: "أ", notes: "", discountStart: "2026-01-15", discountDuration: "6", cashbackStart: "2026-02-01", cashbackDuration: "3" });
+  const pkg = { name: "أ", notes: null, discountStart: "2026-01-15", discountEnd: "2026-07-15", cashbackStart: "2026-02-01", cashbackEnd: "2026-05-01", billCycle: "yearly" };
+  expect(packageFormInitial(pkg)).toEqual({ name: "أ", notes: "", discountStart: "2026-01-15", discountDuration: "6", cashbackStart: "2026-02-01", cashbackDuration: "3", billCycle: "yearly" });
   expect(packageFormInitial({ ...pkg, discountEnd: null, cashbackStart: null, cashbackEnd: null })).toMatchObject({ discountDuration: "", cashbackStart: "", cashbackDuration: "" });
   // باقة قديمة: نهاية يدوية، وكاش باك بلا تاريخ تفعيل
   expect(packageFormInitial({ ...pkg, discountEnd: "2027-01-14", cashbackStart: null, cashbackEnd: "2026-12-31" })).toMatchObject({ discountDuration: "keep", cashbackDuration: "keep" });

@@ -1,5 +1,6 @@
 import type { PackageWithLines } from "@/db/queries";
 import { lineBilling } from "./billing";
+import { packageInvoiceTotals, packageInvoiceViews } from "./package-billing";
 import { dateStatus, daysBetween, type DateStatus, type IsoDate } from "./dates";
 import type { BillingCycle } from "./periods";
 import type { LineType } from "./slots";
@@ -40,6 +41,8 @@ export interface PackageSummary {
   unpaidPeriods: number;
   /** مجموع المستحق على أشخاص الباقة بالهللات */
   dueHalalas: number;
+  /** المتبقي للشركة من فواتير الباقة (التي لها مبلغ ولم تُدفع) بالهللات */
+  companyOwedHalalas: number;
   /** الأشخاص (أصحاب الشرائح) بترتيب الشرائح */
   people: PersonSummary[];
 }
@@ -62,7 +65,15 @@ export interface UnpaidGroup {
 }
 
 export interface DashboardData {
-  tiles: { packages: number; lines: number; unpaidCurrent: number; endingSoon: number; totalDueHalalas: number };
+  tiles: {
+    packages: number;
+    lines: number;
+    unpaidCurrent: number;
+    endingSoon: number;
+    totalDueHalalas: number;
+    /** مجموع المتبقي للشركة من فواتير كل الباقات */
+    companyOwedHalalas: number;
+  };
   upcoming: UpcomingDate[];
   unpaid: UnpaidItem[];
   /** نفس عناصر unpaid مجمّعة حسب الباقة لعرض أكثر إيجازاً */
@@ -81,6 +92,7 @@ export function buildDashboard(pkgs: PackageWithLines[], today: IsoDate): Dashbo
   const summaries: PackageSummary[] = [];
   let lineCount = 0;
   let totalDueHalalas = 0;
+  let companyOwedHalalas = 0;
 
   for (const pkg of pkgs) {
     for (const kind of ["discountEnd", "cashbackEnd"] as const) {
@@ -123,6 +135,8 @@ export function buildDashboard(pkgs: PackageWithLines[], today: IsoDate): Dashbo
       }
     }
     totalDueHalalas += packageDueHalalas;
+    const companyOwed = packageInvoiceTotals(packageInvoiceViews(pkg, today)).owedHalalas;
+    companyOwedHalalas += companyOwed;
 
     summaries.push({
       id: pkg.id,
@@ -135,6 +149,7 @@ export function buildDashboard(pkgs: PackageWithLines[], today: IsoDate): Dashbo
       filledLines: pkg.lines.filter(isFilled).length,
       unpaidPeriods,
       dueHalalas: packageDueHalalas,
+      companyOwedHalalas: companyOwed,
       people,
     });
   }
@@ -161,6 +176,7 @@ export function buildDashboard(pkgs: PackageWithLines[], today: IsoDate): Dashbo
       unpaidCurrent: unpaid.length,
       endingSoon: upcoming.filter((u) => u.status === "ending_soon").length,
       totalDueHalalas,
+      companyOwedHalalas,
     },
     upcoming,
     unpaid,

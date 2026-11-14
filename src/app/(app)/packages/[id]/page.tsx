@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
 import { deletePackageAction } from "@/actions/packages";
 import { LineCard } from "@/components/line-card";
+import { PackageInvoices } from "@/components/package-invoices";
 import { StatusBadge } from "@/components/status-badge";
 import { LinkButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -12,6 +13,7 @@ import { getPackageWithLines } from "@/db/queries";
 import { lineBilling } from "@/lib/billing";
 import { dateStatus, daysBetween, durationFromDates, formatIsoDate, todayRiyadh, type IsoDate } from "@/lib/dates";
 import { labels } from "@/lib/labels";
+import { packageBilling } from "@/lib/package-billing";
 import { parseId } from "@/lib/validation";
 
 type Props = { params: Promise<{ id: string }> };
@@ -52,6 +54,7 @@ export default async function PackagePage({ params }: Props) {
 
   const today = todayRiyadh();
   const paymentCount = pkg.lines.reduce((sum, line) => sum + line.payments.length, 0);
+  const bill = packageBilling(pkg, today);
 
   return (
     <div className="flex flex-col gap-6">
@@ -98,6 +101,17 @@ export default async function PackagePage({ params }: Props) {
           />
         </dl>
       </Card>
+
+      <PackageInvoices
+        // تغيّر الدورة أو تاريخ البداية يغيّر الفترات نفسها: نعيد تركيب القسم
+        key={`${bill.cycle}:${bill.start}`}
+        packageId={pkg.id}
+        cycle={bill.cycle}
+        start={bill.start}
+        startsInFuture={bill.startsInFuture}
+        invoices={bill.invoices}
+        people={bill.people}
+      />
 
       <section aria-labelledby="lines-title" className="flex flex-col gap-4">
         <h2 id="lines-title" className="text-lg font-semibold">

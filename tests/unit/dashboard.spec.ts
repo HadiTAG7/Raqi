@@ -10,9 +10,11 @@ function pkg(overrides: Partial<PackageWithLines> & { id: number; name: string; 
     discountEnd: null,
     cashbackStart: null,
     cashbackEnd: null,
+    billCycle: "monthly",
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
     lines: [],
+    invoices: [],
     ...overrides,
   };
 }
@@ -46,7 +48,7 @@ test("buildDashboard يحسب البطاقات ويرتّب التواريخ", (
     today,
   );
 
-  expect(data.tiles).toEqual({ packages: 2, lines: 3, unpaidCurrent: 1, endingSoon: 1, totalDueHalalas: 0 });
+  expect(data.tiles).toEqual({ packages: 2, lines: 3, unpaidCurrent: 1, endingSoon: 1, totalDueHalalas: 0, companyOwedHalalas: 0 });
   expect(data.upcoming.map((u) => [u.packageName, u.kind, u.status, u.daysLeft])).toEqual([
     ["أ", "discountEnd", "ending_soon", 10],
     ["ب", "discountEnd", "active", 103],
@@ -65,7 +67,7 @@ test("buildDashboard يحسب البطاقات ويرتّب التواريخ", (
 
 test("بدون باقات", () => {
   const data = buildDashboard([], today);
-  expect(data.tiles).toEqual({ packages: 0, lines: 0, unpaidCurrent: 0, endingSoon: 0, totalDueHalalas: 0 });
+  expect(data.tiles).toEqual({ packages: 0, lines: 0, unpaidCurrent: 0, endingSoon: 0, totalDueHalalas: 0, companyOwedHalalas: 0 });
   expect(data.upcoming).toEqual([]);
   expect(data.unpaidGroups).toEqual([]);
   expect(data.packages).toEqual([]);
@@ -113,4 +115,21 @@ test("المبالغ والمجانية: المستحق = غير المدفوع 
     [6, "2026", 120000],
   ]);
   expect(data.tiles.unpaidCurrent).toBe(4);
+});
+
+test("المتبقي للشركة: مجموع فواتير الباقة غير المدفوعة التي لها مبلغ", () => {
+  const inv = (period: string, amountHalalas: number | null, paid = false) => ({ id: 0, packageId: 0, period, amountHalalas, paidAt: paid ? "2026-01-01T00:00:00.000Z" : null });
+  const data = buildDashboard(
+    [
+      pkg({ id: 1, name: "أ", discountStart: "2026-07-01", invoices: [inv("2026-07", 30000, true), inv("2026-08", 30000), inv("2026-09", null)] }),
+      // سنوية: 2025 و2026، وفاتورة 2024 خارج النطاق لا تُحسب
+      pkg({ id: 2, name: "ب", discountStart: "2025-03-10", billCycle: "yearly", invoices: [inv("2024", 99900), inv("2025", 250000), inv("2026", 260000, true)] }),
+    ],
+    today,
+  );
+  expect(data.packages.map((p) => [p.id, p.companyOwedHalalas])).toEqual([
+    [1, 30000],
+    [2, 250000],
+  ]);
+  expect(data.tiles.companyOwedHalalas).toBe(280000);
 });

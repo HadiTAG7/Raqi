@@ -16,7 +16,9 @@ test("الرئيسية تعرض حالات التواريخ والملخص", asy
   await expect(page.getByText("اليوم: 20 سبتمبر 2026")).toBeVisible();
 
   const tiles = page.getByTestId("tile");
-  await expect(tiles).toHaveCount(5);
+  await expect(tiles).toHaveCount(6);
+  await expect(tiles.nth(4)).toContainText("المستحق على الأشخاص");
+  await expect(tiles.nth(5)).toContainText("المتبقي للشركة");
   const packagesCount = Number(await tiles.nth(0).getByTestId("tile-value").textContent());
   const linesCount = Number(await tiles.nth(1).getByTestId("tile-value").textContent());
   expect(packagesCount).toBeGreaterThanOrEqual(3);

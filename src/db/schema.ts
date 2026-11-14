@@ -15,6 +15,8 @@ export const packages = sqliteTable("packages", {
   cashbackStart: text("cashback_start"),
   /** تاريخ نهاية الكاش باك (YYYY-MM-DD)، يُحسب من تاريخ تفعيله + المدة المختارة */
   cashbackEnd: text("cashback_end"),
+  /** دورة فاتورة الباقة التي تطلبها الشركة (فتراتها تبدأ من تاريخ تفعيل الخصم) */
+  billCycle: text("bill_cycle", { enum: ["monthly", "yearly"] }).notNull().default("monthly"),
   createdAt: text("created_at").notNull().$defaultFn(nowIso),
   updatedAt: text("updated_at").notNull().$defaultFn(nowIso),
 });
@@ -63,8 +65,34 @@ export const payments = sqliteTable(
   ],
 );
 
+/** فواتير الباقة نفسها (ما تطلبه الشركة): مبلغ كل فاتورة وحالة دفعها للشركة. */
+export const packageInvoices = sqliteTable(
+  "package_invoices",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    packageId: integer("package_id")
+      .notNull()
+      .references(() => packages.id, { onDelete: "cascade" }),
+    /** "YYYY-MM" للشهري أو "YYYY" للسنوي */
+    period: text("period").notNull(),
+    /** مبلغ هذه الفاتورة بالهللات؛ فارغ = لم يُسجَّل بعد */
+    amountHalalas: integer("amount_halalas"),
+    /** وقت تسجيل الدفع للشركة؛ فارغ = غير مدفوعة */
+    paidAt: text("paid_at"),
+  },
+  (t) => [
+    uniqueIndex("package_invoices_package_period_idx").on(t.packageId, t.period),
+    index("package_invoices_package_idx").on(t.packageId),
+  ],
+);
+
 export const packagesRelations = relations(packages, ({ many }) => ({
   lines: many(lines),
+  invoices: many(packageInvoices),
+}));
+
+export const packageInvoicesRelations = relations(packageInvoices, ({ one }) => ({
+  package: one(packages, { fields: [packageInvoices.packageId], references: [packages.id] }),
 }));
 
 export const linesRelations = relations(lines, ({ one, many }) => ({
@@ -79,3 +107,4 @@ export const paymentsRelations = relations(payments, ({ one }) => ({
 export type PackageRow = typeof packages.$inferSelect;
 export type LineRow = typeof lines.$inferSelect;
 export type PaymentRow = typeof payments.$inferSelect;
+export type PackageInvoiceRow = typeof packageInvoices.$inferSelect;

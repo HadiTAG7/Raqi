@@ -72,8 +72,8 @@ test("شخص مجاني وأشخاص بمبالغ: المستحق يُحسب و�
   await expect(unpaidLines.filter({ hasText: "الشريحة 3" })).toContainText("المستحق 172.50 ر.س");
 
   const tiles = page.getByTestId("tile");
-  await expect(tiles).toHaveCount(5);
-  await expect(tiles.nth(4)).toContainText("إجمالي المستحق");
+  await expect(tiles).toHaveCount(6);
+  await expect(tiles.nth(4)).toContainText("المستحق على الأشخاص");
   await expect(tiles.nth(4)).toContainText("ر.س");
   // نص البطاقة مثل "272.50ر.س": نأخذ الرقم الأول فقط (نقطة "ر.س" ليست جزءاً منه)
   const totalText = (await tiles.nth(4).getByTestId("tile-value").textContent()) ?? "";

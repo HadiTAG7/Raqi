@@ -1,9 +1,9 @@
 import { asc, eq } from "drizzle-orm";
 import { getDb } from "./client";
-import { lines, packages, payments, type LineRow, type PackageRow, type PaymentRow } from "./schema";
+import { lines, packageInvoices, packages, payments, type LineRow, type PackageInvoiceRow, type PackageRow, type PaymentRow } from "./schema";
 
 export type LineWithPayments = LineRow & { payments: PaymentRow[] };
-export type PackageWithLines = PackageRow & { lines: LineWithPayments[] };
+export type PackageWithLines = PackageRow & { lines: LineWithPayments[]; invoices: PackageInvoiceRow[] };
 
 /** كل الباقات مع شرائحها ومدفوعاتها (البيانات صغيرة: مستخدم واحد). */
 export async function getAllPackages(): Promise<PackageWithLines[]> {
@@ -15,6 +15,7 @@ export async function getAllPackages(): Promise<PackageWithLines[]> {
         orderBy: [asc(lines.slot)],
         with: { payments: { orderBy: [asc(payments.period)] } },
       },
+      invoices: { orderBy: [asc(packageInvoices.period)] },
     },
   });
 }
@@ -28,6 +29,7 @@ export async function getPackageWithLines(id: number): Promise<PackageWithLines 
         orderBy: [asc(lines.slot)],
         with: { payments: { orderBy: [asc(payments.period)] } },
       },
+      invoices: { orderBy: [asc(packageInvoices.period)] },
     },
   });
   return row ?? null;

@@ -16,6 +16,7 @@ const emptyValues: PackageFormValues = {
   discountDuration: "",
   cashbackStart: "",
   cashbackDuration: "",
+  billCycle: "monthly",
 };
 
 /** نص المعاينة تحت قائمة المدة: تاريخ النهاية المحسوب من تاريخ التفعيل + المدة. */
@@ -120,6 +121,12 @@ export function PackageForm({
         >
           <Select id="cashbackDuration" name="cashbackDuration" defaultValue={values.cashbackDuration} onChange={track("cashbackDuration")} aria-invalid={errorFor("cashbackDuration") ? true : undefined}>
             <DurationOptions keepEnd={keepCashbackEnd} />
+          </Select>
+        </Field>
+        <Field label={labels.packageBill.cycle} htmlFor="billCycle" error={errorFor("billCycle")} hint={labels.packageBill.cycleHint}>
+          <Select id="billCycle" name="billCycle" defaultValue={values.billCycle} aria-invalid={errorFor("billCycle") ? true : undefined}>
+            <option value="monthly">{labels.line.monthly}</option>
+            <option value="yearly">{labels.line.yearly}</option>
           </Select>
         </Field>
       </div>

@@ -26,6 +26,7 @@ export const packageFormSchema = z.object({
   discountDuration: durationField,
   cashbackStart: optionalIsoDate,
   cashbackDuration: durationField,
+  billCycle: z.preprocess((v) => (v === "" || v == null ? "monthly" : v), z.enum(["monthly", "yearly"])),
 });
 
 export type PackageFormInput = z.infer<typeof packageFormSchema>;
@@ -38,6 +39,8 @@ export interface PackageInput {
   discountEnd: string | null;
   cashbackStart: string | null;
   cashbackEnd: string | null;
+  /** دورة فاتورة الباقة التي تطلبها الشركة */
+  billCycle: "monthly" | "yearly";
 }
 
 /** تواريخ النهاية المخزّنة حالياً (للتعديل فقط)، يحتاجها خيار "الإبقاء على التاريخ الحالي". */
@@ -81,6 +84,7 @@ export function resolvePackageDates(form: PackageFormInput, existing?: ExistingP
       discountEnd,
       cashbackStart: form.cashbackStart,
       cashbackEnd,
+      billCycle: form.billCycle,
     },
   };
 }
@@ -100,6 +104,7 @@ export interface PackageFormValues {
   discountDuration: string;
   cashbackStart: string;
   cashbackDuration: string;
+  billCycle: string;
 }
 
 function durationFieldFor(start: string | null, end: string | null): DurationFieldValue {
@@ -116,6 +121,7 @@ export function packageFormInitial(pkg: {
   discountEnd: string | null;
   cashbackStart: string | null;
   cashbackEnd: string | null;
+  billCycle: string;
 }): PackageFormValues {
   return {
     name: pkg.name,
@@ -124,6 +130,7 @@ export function packageFormInitial(pkg: {
     discountDuration: durationFieldFor(pkg.discountStart, pkg.discountEnd),
     cashbackStart: pkg.cashbackStart ?? "",
     cashbackDuration: durationFieldFor(pkg.cashbackStart, pkg.cashbackEnd),
+    billCycle: pkg.billCycle,
   };
 }
 
@@ -176,7 +183,7 @@ export function personFieldName(slot: number, field: PersonField): string {
   return `${field}_${slot}`;
 }
 
-export const PACKAGE_FIELDS = ["name", "notes", "discountStart", "discountDuration", "cashbackStart", "cashbackDuration"] as const;
+export const PACKAGE_FIELDS = ["name", "notes", "discountStart", "discountDuration", "cashbackStart", "cashbackDuration", "billCycle"] as const;
 export const LINE_FIELDS = ["holderName", "phoneNumber", "simReference", "billingCycle", "amount", "billingStart", "notes"] as const;
 
 /** يحوّل FormData إلى كائن نصي للحقول المطلوبة فقط (القيم الناقصة تصبح ""). */
